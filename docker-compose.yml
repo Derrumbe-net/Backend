@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: derrumbes-db
+    image: mysql:8.0          
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./internal/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    container_name: derrumbes-api
+    ports:
+      - "8080:8080"
+    build:
+      dockerfile: ./cmd/api/Dockerfile
+    depends_on:
+      - db
+    volumes:
+      - ./.:/app
+    restart: unless-stopped
+    
+volumes: 
+  dbdata:
