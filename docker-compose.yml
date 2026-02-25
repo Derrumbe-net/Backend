@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   db:
     container_name: derrumbes-db
-    image: mysql:8.0          
+    image: mysql:8.0
     ports:
       - "3306:3306"
     env_file:
@@ -18,11 +16,13 @@ services:
       - "8080:8080"
     build:
       dockerfile: ./cmd/api/Dockerfile
+    env_file:
+      - .env
     depends_on:
       - db
     volumes:
       - ./.:/app
-    restart: unless-stopped
-    
+    #restart: unless-stopped
+
 volumes: 
   dbdata:
