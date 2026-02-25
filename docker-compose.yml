@@ -22,7 +22,7 @@ services:
       - db
     volumes:
       - ./.:/app
-    restart: unless-stopped
+    #restart: unless-stopped
 
 volumes: 
   dbdata:
