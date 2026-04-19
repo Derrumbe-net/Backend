@@ -37,7 +37,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          script:
+          script: |
             # 1. Navigate to the root directory where docker-compose lives
             cd /root
             
