@@ -24,73 +24,73 @@ func NewStationHandler(service *StationService) *StationHandler {
 
 type CreateStationRequest struct {
 	Name                    string    `json:"name"`
-	LandUnit                string    `json:"land_unit"`
-	GeologicalUnit          string    `json:"geological_unit"`
-	Susceptibility          string    `json:"susceptibility"`
 	Depth                   string    `json:"depth"`
-	LandslideForecast       float64   `json:"landslide_forecast"`
-	ImagePath               string    `json:"image_path"`
 	Latitude                float64   `json:"latitude"`
 	Longitude               float64   `json:"longitude"`
-	Elevation               int       `json:"elevation"`
-	Slope                   float64   `json:"slope"`
 	IsAvailable             bool      `json:"is_available"`
-	Collaborator            string    `json:"collaborator"`
 	StationInstallationDate time.Time `json:"station_installation_date"`
+	LandUnit                *string   `json:"land_unit"`
+	GeologicalUnit          *string   `json:"geological_unit"`
+	Susceptibility          *string   `json:"susceptibility"`
+	LandslideForecast       *float64  `json:"landslide_forecast"`
+	ImagePath               *string   `json:"image_path"`
+	Elevation               *int      `json:"elevation"`
+	Slope                   *float64  `json:"slope"`
+	Collaborator            *string   `json:"collaborator"`
 }
 
 type UpdateStationRequest struct {
 	Name                    string    `json:"name"`
-	LandUnit                string    `json:"land_unit"`
-	GeologicalUnit          string    `json:"geological_unit"`
-	Susceptibility          string    `json:"susceptibility"`
 	Depth                   string    `json:"depth"`
-	LandslideForecast       float64   `json:"landslide_forecast"`
-	ImagePath               string    `json:"image_path"`
 	Latitude                float64   `json:"latitude"`
 	Longitude               float64   `json:"longitude"`
-	Elevation               int       `json:"elevation"`
-	Slope                   float64   `json:"slope"`
 	IsAvailable             bool      `json:"is_available"`
-	Collaborator            string    `json:"collaborator"`
 	StationInstallationDate time.Time `json:"station_installation_date"`
+	LandUnit                *string   `json:"land_unit"`
+	GeologicalUnit          *string   `json:"geological_unit"`
+	Susceptibility          *string   `json:"susceptibility"`
+	LandslideForecast       *float64  `json:"landslide_forecast"`
+	ImagePath               *string   `json:"image_path"`
+	Elevation               *int      `json:"elevation"`
+	Slope                   *float64  `json:"slope"`
+	Collaborator            *string   `json:"collaborator"`
 }
 
 type StationResponse struct {
 	StationID               int       `json:"station_id"`
 	Name                    string    `json:"name"`
-	LandUnit                string    `json:"land_unit"`
-	GeologicalUnit          string    `json:"geological_unit"`
-	Susceptibility          string    `json:"susceptibility"`
 	Depth                   string    `json:"depth"`
-	LandslideForecast       float64   `json:"landslide_forecast"`
-	ImagePath               string    `json:"image_path"`
 	Latitude                float64   `json:"latitude"`
 	Longitude               float64   `json:"longitude"`
-	Elevation               int       `json:"elevation"`
-	Slope                   float64   `json:"slope"`
 	IsAvailable             bool      `json:"is_available"`
-	Collaborator            string    `json:"collaborator"`
 	StationInstallationDate time.Time `json:"station_installation_date"`
+	LandUnit                *string   `json:"land_unit"`
+	GeologicalUnit          *string   `json:"geological_unit"`
+	Susceptibility          *string   `json:"susceptibility"`
+	LandslideForecast       *float64  `json:"landslide_forecast"`
+	ImagePath               *string   `json:"image_path"`
+	Elevation               *int      `json:"elevation"`
+	Slope                   *float64  `json:"slope"`
+	Collaborator            *string   `json:"collaborator"`
 }
 
 func toStationResponse(s *models.Station) StationResponse {
 	return StationResponse{
 		StationID:               s.StationID,
 		Name:                    s.Name,
+		Depth:                   s.Depth,
+		Latitude:                s.Latitude,
+		Longitude:               s.Longitude,
+		IsAvailable:             s.IsAvailable,
+		StationInstallationDate: s.StationInstallationDate,
 		LandUnit:                s.LandUnit,
 		GeologicalUnit:          s.GeologicalUnit,
 		Susceptibility:          s.Susceptibility,
-		Depth:                   s.Depth,
 		LandslideForecast:       s.LandslideForecast,
 		ImagePath:               s.ImagePath,
-		Latitude:                s.Latitude,
-		Longitude:               s.Longitude,
 		Elevation:               s.Elevation,
 		Slope:                   s.Slope,
-		IsAvailable:             s.IsAvailable,
 		Collaborator:            s.Collaborator,
-		StationInstallationDate: s.StationInstallationDate,
 	}
 }
 
@@ -137,19 +137,19 @@ func (h *StationHandler) CreateStation(w http.ResponseWriter, r *http.Request) {
 
 	s := &models.Station{
 		Name:                    req.Name,
+		Depth:                   req.Depth,
+		Latitude:                req.Latitude,
+		Longitude:               req.Longitude,
+		IsAvailable:             req.IsAvailable,
+		StationInstallationDate: req.StationInstallationDate,
 		LandUnit:                req.LandUnit,
 		GeologicalUnit:          req.GeologicalUnit,
 		Susceptibility:          req.Susceptibility,
-		Depth:                   req.Depth,
 		LandslideForecast:       req.LandslideForecast,
 		ImagePath:               req.ImagePath,
-		Latitude:                req.Latitude,
-		Longitude:               req.Longitude,
 		Elevation:               req.Elevation,
 		Slope:                   req.Slope,
-		IsAvailable:             req.IsAvailable,
 		Collaborator:            req.Collaborator,
-		StationInstallationDate: req.StationInstallationDate,
 	}
 
 	id, err := h.Service.CreateStation(s)
@@ -175,19 +175,19 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 	s := &models.Station{
 		StationID:               id,
 		Name:                    req.Name,
+		Depth:                   req.Depth,
+		Latitude:                req.Latitude,
+		Longitude:               req.Longitude,
+		IsAvailable:             req.IsAvailable,
+		StationInstallationDate: req.StationInstallationDate,
 		LandUnit:                req.LandUnit,
 		GeologicalUnit:          req.GeologicalUnit,
 		Susceptibility:          req.Susceptibility,
-		Depth:                   req.Depth,
 		LandslideForecast:       req.LandslideForecast,
 		ImagePath:               req.ImagePath,
-		Latitude:                req.Latitude,
-		Longitude:               req.Longitude,
 		Elevation:               req.Elevation,
 		Slope:                   req.Slope,
-		IsAvailable:             req.IsAvailable,
 		Collaborator:            req.Collaborator,
-		StationInstallationDate: req.StationInstallationDate,
 	}
 
 	if err := h.Service.UpdateStation(s); err != nil {
@@ -215,16 +215,18 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 		idStr := r.PathValue("id")
 		id, _ := strconv.Atoi(idStr)
 		s, err := h.Service.GetStation(id)
-		if err != nil || s == nil || s.ImagePath == "" {
+
+		// Safely check the pointer for ImagePath
+		if err != nil || s == nil || s.ImagePath == nil || *s.ImagePath == "" {
 			http.Error(w, "Image not found", http.StatusNotFound)
 			return
 		}
 
 		if imageType == "sensor" || imageType == "" {
-			http.ServeFile(w, r, s.ImagePath)
+			http.ServeFile(w, r, *s.ImagePath) // Serve the dereferenced pointer
 			return
 		}
-		// If type is specified but doesn't match, we could handle other types here
+
 		http.Error(w, "Image type not supported", http.StatusBadRequest)
 		return
 	}
