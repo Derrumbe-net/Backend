@@ -124,6 +124,42 @@ func (s *EmailService) SendReportAlert(r *models.Report) error {
 		frontendURL = "http://localhost:3000"
 	}
 
+	// Safely unwrap ALL optional database fields
+	safeLat := 0.0
+	if r.Latitude != nil {
+		safeLat = *r.Latitude
+	}
+
+	safeLng := 0.0
+	if r.Longitude != nil {
+		safeLng = *r.Longitude
+	}
+
+	safeDesc := "Not provided"
+	if r.Description != nil {
+		safeDesc = *r.Description
+	}
+
+	safeName := "Anonymous"
+	if r.ReporterName != nil {
+		safeName = *r.ReporterName
+	}
+
+	safePhone := "Not provided"
+	if r.ReporterPhone != nil {
+		safePhone = *r.ReporterPhone
+	}
+
+	safeEmail := "Not provided"
+	if r.ReporterEmail != nil {
+		safeEmail = *r.ReporterEmail
+	}
+
+	safeAddress := "Not provided"
+	if r.PhysicalAddress != nil {
+		safeAddress = *r.PhysicalAddress
+	}
+
 	data := struct {
 		ID              int
 		ReportedAt      string
@@ -140,13 +176,13 @@ func (s *EmailService) SendReportAlert(r *models.Report) error {
 		ID:              r.ReportID,
 		ReportedAt:      r.ReportedAt.Format("Jan 02, 2006 15:04"),
 		City:            r.City,
-		Latitude:        r.Latitude,
-		Longitude:       r.Longitude,
-		PhysicalAddress: r.PhysicalAddress,
-		Description:     r.Description,
-		ReporterName:    r.ReporterName,
-		ReporterPhone:   r.ReporterPhone,
-		ReporterEmail:   r.ReporterEmail,
+		Latitude:        safeLat,
+		Longitude:       safeLng,
+		PhysicalAddress: safeAddress,
+		Description:     safeDesc,
+		ReporterName:    safeName,
+		ReporterPhone:   safePhone,
+		ReporterEmail:   safeEmail,
 		CMSLink:         frontendURL + "/cms",
 	}
 
