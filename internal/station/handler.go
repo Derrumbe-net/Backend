@@ -268,3 +268,30 @@ func (h *StationHandler) GetStationWcHistory(w http.ResponseWriter, r *http.Requ
 	}
 	json.NewEncoder(w).Encode(readings)
 }
+
+func (h *StationHandler) GetAllStationFilesData(w http.ResponseWriter, r *http.Request) {
+	data, err := h.Service.GetAllStationFilesData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *StationHandler) GetStationFileData(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid station ID", http.StatusBadRequest)
+		return
+	}
+
+	readings, err := h.Service.GetStationFileData(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(readings)
+}

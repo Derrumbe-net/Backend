@@ -39,3 +39,33 @@ func (s *StationService) DeleteStation(id int) error {
 func (s *StationService) GetStationWcHistory(stationID int) ([]models.StationReading, error) {
 	return s.DAO.GetReadingsHistory(stationID)
 }
+
+func (s *StationService) GetAllStationFilesData() ([]map[string]interface{}, error) {
+	stations, err := s.DAO.GetAllStations()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]map[string]interface{}, 0, len(stations))
+	for _, st := range stations {
+		readings, err := s.DAO.GetReadingsHistory(st.StationID)
+		if err != nil {
+			result = append(result, map[string]interface{}{
+				"station_id": st.StationID,
+				"error":      err.Error(),
+			})
+			continue
+		}
+
+		result = append(result, map[string]interface{}{
+			"station_id": st.StationID,
+			"data":       readings,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *StationService) GetStationFileData(id int) ([]models.StationReading, error) {
+	return s.DAO.GetReadingsHistory(id)
+}
