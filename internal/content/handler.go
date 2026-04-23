@@ -3,7 +3,6 @@ package content
 import (
     "encoding/json"
     "net/http"
-    "os"
     "path/filepath"
     "strconv"
     "time"
@@ -25,19 +24,19 @@ func NewContentHandler(service *ContentService) *ContentHandler {
 type CreateProjectRequest struct {
     Title         string `json:"title"`
     Description   string `json:"description"`
-    StartYear     uint16 `json:"start_year"`
-    EndYear       uint16 `json:"end_year"`
+    StartYear     any    `json:"start_year"`
+    EndYear       any    `json:"end_year"`
     ProjectStatus string `json:"project_status"`
-    ImagePath     string `json:"image_path"`
+    ImagePath     string `json:"image_url"`
 }
 
 type UpdateProjectRequest struct {
     Title         string `json:"title"`
     Description   string `json:"description"`
-    StartYear     uint16 `json:"start_year"`
-    EndYear       uint16 `json:"end_year"`
+    StartYear     any    `json:"start_year"`
+    EndYear       any    `json:"end_year"`
     ProjectStatus string `json:"project_status"`
-    ImagePath     string `json:"image_path"`
+    ImagePath     string `json:"image_url"`
 }
 
 type ProjectResponse struct {
@@ -47,7 +46,7 @@ type ProjectResponse struct {
     StartYear     uint16 `json:"start_year"`
     EndYear       uint16 `json:"end_year"`
     ProjectStatus string `json:"project_status"`
-    ImagePath     string `json:"image_path"`
+    ImagePath     string `json:"image_url"`
 }
 
 func toProjectResponse(p *models.Project) ProjectResponse {
@@ -201,6 +200,29 @@ func (h *ContentHandler) GetProject(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(toProjectResponse(p))
 }
 
+func parseAnyUint16(v any) uint16 {
+    if v == nil {
+        return 0
+    }
+    switch val := v.(type) {
+    case float64:
+        return uint16(val)
+    case int:
+        return uint16(val)
+    case uint16:
+        return val
+    case string:
+        if val == "" {
+            return 0
+        }
+        f, err := strconv.ParseUint(val, 10, 16)
+        if err == nil {
+            return uint16(f)
+        }
+    }
+    return 0
+}
+
 func (h *ContentHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
     var req CreateProjectRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -213,8 +235,8 @@ func (h *ContentHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
     p := &models.Project{
         Title:         req.Title,
         Description:   req.Description,
-        StartYear:     req.StartYear,
-        EndYear:       req.EndYear,
+        StartYear:     parseAnyUint16(req.StartYear),
+        EndYear:       parseAnyUint16(req.EndYear),
         ProjectStatus: req.ProjectStatus,
         ImagePath:     req.ImagePath,
     }
@@ -248,8 +270,8 @@ func (h *ContentHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
         ProjectID:     id,
         Title:         req.Title,
         Description:   req.Description,
-        StartYear:     req.StartYear,
-        EndYear:       req.EndYear,
+        StartYear:     parseAnyUint16(req.StartYear),
+        EndYear:       parseAnyUint16(req.EndYear),
         ProjectStatus: req.ProjectStatus,
         ImagePath:     req.ImagePath,
     }
@@ -277,29 +299,16 @@ func (h *ContentHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ContentHandler) ServeProjectImage(w http.ResponseWriter, r *http.Request) {
-    filename := r.PathValue("filename")
-    if filename == "" {
-        idStr := r.PathValue("id")
-        id, _ := strconv.Atoi(idStr)
-        p, err := h.Service.GetProject(id)
-        if err != nil || p == nil || p.ImagePath == "" {
-            w.Header().Set("Content-Type", "application/json")
-            w.WriteHeader(http.StatusNotFound)
-            json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
-            return
-        }
-        http.ServeFile(w, r, p.ImagePath)
-        return
-    }
-
-    path := filepath.Join("uploads", "projects", filename)
-    if _, err := os.Stat(path); os.IsNotExist(err) {
+    idStr := r.PathValue("id")
+    id, _ := strconv.Atoi(idStr)
+    p, err := h.Service.GetProject(id)
+    if err != nil || p == nil || p.ImagePath == "" {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusNotFound)
         json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
         return
     }
-    http.ServeFile(w, r, path)
+    http.ServeFile(w, r, p.ImagePath)
 }
 
 func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Request) {
@@ -433,29 +442,16 @@ func (h *ContentHandler) DeletePublication(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ContentHandler) ServePublicationImage(w http.ResponseWriter, r *http.Request) {
-    filename := r.PathValue("filename")
-    if filename == "" {
-        idStr := r.PathValue("id")
-        id, _ := strconv.Atoi(idStr)
-        p, err := h.Service.GetPublication(id)
-        if err != nil || p == nil || p.ImagePath == "" {
-            w.Header().Set("Content-Type", "application/json")
-            w.WriteHeader(http.StatusNotFound)
-            json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
-            return
-        }
-        http.ServeFile(w, r, p.ImagePath)
-        return
-    }
-
-    path := filepath.Join("uploads", "publications", filename)
-    if _, err := os.Stat(path); os.IsNotExist(err) {
+    idStr := r.PathValue("id")
+    id, _ := strconv.Atoi(idStr)
+    p, err := h.Service.GetPublication(id)
+    if err != nil || p == nil || p.ImagePath == "" {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusNotFound)
         json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
         return
     }
-    http.ServeFile(w, r, path)
+    http.ServeFile(w, r, p.ImagePath)
 }
 
 func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.Request) {
@@ -588,14 +584,29 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
         json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+
     if err := h.Service.UpdateFundingSourceImage(id, path); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
         json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+}
+
+func (h *ContentHandler) ServeFundingSourceImage(w http.ResponseWriter, r *http.Request) {
+    idStr := r.PathValue("id")
+    id, _ := strconv.Atoi(idStr)
+    p := h.Service.GetFundingSource(id)
+    if p == nil || p.ImagePath == "" {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
+        return
+    }
+    http.ServeFile(w, r, p.ImagePath)
 }
 
 // Faculty Members
@@ -708,14 +719,29 @@ func (h *ContentHandler) UploadFacultyMemberImage(w http.ResponseWriter, r *http
         json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+
     if err := h.Service.UpdateFacultyMemberImage(id, path); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
         json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+}
+
+func (h *ContentHandler) ServeFacultyMemberImage(w http.ResponseWriter, r *http.Request) {
+    idStr := r.PathValue("id")
+    id, _ := strconv.Atoi(idStr)
+    p, err := h.Service.GetFacultyMember(id)
+    if err != nil || p == nil || p.ImagePath == "" {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
+        return
+    }
+    http.ServeFile(w, r, p.ImagePath)
 }
 
 // Student Members

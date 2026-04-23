@@ -15,9 +15,9 @@ func NewStationDAO(db *sql.DB) *StationDAO {
 
 // Station CRUD
 func (dao *StationDAO) CreateStation(s *models.Station) (int64, error) {
-	query := `INSERT INTO stations (name, land_unit, geological_unit, susceptibility, depth, landslide_forecast, image_path, latitude, longitude, elevation, slope, is_available, collaborator, station_installation_date) 
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	res, err := dao.DB.Exec(query, s.Name, s.LandUnit, s.GeologicalUnit, s.Susceptibility, s.Depth, s.LandslideForecast, s.ImagePath, s.Latitude, s.Longitude, s.Elevation, s.Slope, s.IsAvailable, s.Collaborator, s.StationInstallationDate)
+	query := `INSERT INTO stations (name, land_unit, geological_unit, susceptibility, depth, landslide_forecast, image_path, latitude, longitude, elevation, slope, is_available, collaborator, station_installation_date, wc1_max, wc2_max, wc3_max, wc4_max) 
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	res, err := dao.DB.Exec(query, s.Name, s.LandUnit, s.GeologicalUnit, s.Susceptibility, s.Depth, s.LandslideForecast, s.ImagePath, s.Latitude, s.Longitude, s.Elevation, s.Slope, s.IsAvailable, s.Collaborator, s.StationInstallationDate, s.WC1Max, s.WC2Max, s.WC3Max, s.WC4Max)
 	if err != nil {
 		return 0, err
 	}
@@ -26,8 +26,8 @@ func (dao *StationDAO) CreateStation(s *models.Station) (int64, error) {
 
 func (dao *StationDAO) GetStationByID(id int) (*models.Station, error) {
 	var s models.Station
-	query := "SELECT * FROM stations WHERE station_id = ?"
-	err := dao.DB.QueryRow(query, id).Scan(&s.StationID, &s.Name, &s.LandUnit, &s.GeologicalUnit, &s.Susceptibility, &s.Depth, &s.LandslideForecast, &s.ImagePath, &s.Latitude, &s.Longitude, &s.Elevation, &s.Slope, &s.IsAvailable, &s.Collaborator, &s.StationInstallationDate)
+	query := "SELECT station_id, name, land_unit, geological_unit, susceptibility, depth, landslide_forecast, image_path, latitude, longitude, elevation, slope, is_available, collaborator, station_installation_date, wc1_max, wc2_max, wc3_max, wc4_max FROM stations WHERE station_id = ?"
+	err := dao.DB.QueryRow(query, id).Scan(&s.StationID, &s.Name, &s.LandUnit, &s.GeologicalUnit, &s.Susceptibility, &s.Depth, &s.LandslideForecast, &s.ImagePath, &s.Latitude, &s.Longitude, &s.Elevation, &s.Slope, &s.IsAvailable, &s.Collaborator, &s.StationInstallationDate, &s.WC1Max, &s.WC2Max, &s.WC3Max, &s.WC4Max)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -38,7 +38,7 @@ func (dao *StationDAO) GetStationByID(id int) (*models.Station, error) {
 }
 
 func (dao *StationDAO) GetAllStations() ([]models.Station, error) {
-	query := "SELECT * FROM stations"
+	query := "SELECT station_id, name, land_unit, geological_unit, susceptibility, depth, landslide_forecast, image_path, latitude, longitude, elevation, slope, is_available, collaborator, station_installation_date, wc1_max, wc2_max, wc3_max, wc4_max FROM stations"
 	rows, err := dao.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (dao *StationDAO) GetAllStations() ([]models.Station, error) {
 	var stations []models.Station
 	for rows.Next() {
 		var s models.Station
-		if err := rows.Scan(&s.StationID, &s.Name, &s.LandUnit, &s.GeologicalUnit, &s.Susceptibility, &s.Depth, &s.LandslideForecast, &s.ImagePath, &s.Latitude, &s.Longitude, &s.Elevation, &s.Slope, &s.IsAvailable, &s.Collaborator, &s.StationInstallationDate); err != nil {
+		if err := rows.Scan(&s.StationID, &s.Name, &s.LandUnit, &s.GeologicalUnit, &s.Susceptibility, &s.Depth, &s.LandslideForecast, &s.ImagePath, &s.Latitude, &s.Longitude, &s.Elevation, &s.Slope, &s.IsAvailable, &s.Collaborator, &s.StationInstallationDate, &s.WC1Max, &s.WC2Max, &s.WC3Max, &s.WC4Max); err != nil {
 			return nil, err
 		}
 		stations = append(stations, s)
@@ -57,9 +57,9 @@ func (dao *StationDAO) GetAllStations() ([]models.Station, error) {
 }
 
 func (dao *StationDAO) UpdateStation(s *models.Station) error {
-	query := `UPDATE stations SET name = ?, land_unit = ?, geological_unit = ?, susceptibility = ?, depth = ?, landslide_forecast = ?, image_path = ?, latitude = ?, longitude = ?, elevation = ?, slope = ?, is_available = ?, collaborator = ?, station_installation_date = ? 
+	query := `UPDATE stations SET name = ?, land_unit = ?, geological_unit = ?, susceptibility = ?, depth = ?, landslide_forecast = ?, image_path = ?, latitude = ?, longitude = ?, elevation = ?, slope = ?, is_available = ?, collaborator = ?, station_installation_date = ?, wc1_max = ?, wc2_max = ?, wc3_max = ?, wc4_max = ? 
 	          WHERE station_id = ?`
-	_, err := dao.DB.Exec(query, s.Name, s.LandUnit, s.GeologicalUnit, s.Susceptibility, s.Depth, s.LandslideForecast, s.ImagePath, s.Latitude, s.Longitude, s.Elevation, s.Slope, s.IsAvailable, s.Collaborator, s.StationInstallationDate, s.StationID)
+	_, err := dao.DB.Exec(query, s.Name, s.LandUnit, s.GeologicalUnit, s.Susceptibility, s.Depth, s.LandslideForecast, s.ImagePath, s.Latitude, s.Longitude, s.Elevation, s.Slope, s.IsAvailable, s.Collaborator, s.StationInstallationDate, s.WC1Max, s.WC2Max, s.WC3Max, s.WC4Max, s.StationID)
 	return err
 }
 
