@@ -25,7 +25,7 @@ func (dao *AdminDAO) CreateAdmin(email, hashedPassword string) (int64, string, e
 	defer tx.Rollback()
 
 	// Insert into admins table
-	res, err := tx.Exec("INSERT INTO admins (email, password, is_email_verified, is_authorized) VALUES (?, ?, ?, 0, 0)",
+	res, err := tx.Exec("INSERT INTO admins (email, password, is_email_verified, is_authorized) VALUES (?, ?, 0, 0)",
 		email, hashedPassword)
 	if err != nil {
 		return 0, "", err
