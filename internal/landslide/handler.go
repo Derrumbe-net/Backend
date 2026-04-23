@@ -30,10 +30,10 @@ type CreateLandslideRequest struct {
 }
 
 type UpdateLandslideRequest struct {
-	LandslideDate time.Time `json:"landslide_date"`
-	Latitude      float64   `json:"latitude"`
-	Longitude     float64   `json:"longitude"`
-	ImagePath     string    `json:"image_path"`
+	LandslideDate *time.Time `json:"landslide_date"`
+	Latitude      *float64   `json:"latitude"`
+	Longitude     *float64   `json:"longitude"`
+	ImagePath     *string    `json:"image_path"`
 }
 
 type LandslideResponse struct {
@@ -135,6 +135,22 @@ func (h *LandslideHandler) UpdateLandslide(w http.ResponseWriter, r *http.Reques
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
+	// 1. Fetch current
+	l, err := h.Service.GetLandslide(id)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if l == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Landslide not found"})
+		return
+	}
+
+	// 2. Decode partial
 	var req UpdateLandslideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -143,12 +159,18 @@ func (h *LandslideHandler) UpdateLandslide(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	l := &models.Landslide{
-		LandslideID:   id,
-		LandslideDate: req.LandslideDate,
-		Latitude:      req.Latitude,
-		Longitude:     req.Longitude,
-		ImagePath:     req.ImagePath,
+	// 3. Merge
+	if req.LandslideDate != nil {
+		l.LandslideDate = *req.LandslideDate
+	}
+	if req.Latitude != nil {
+		l.Latitude = *req.Latitude
+	}
+	if req.Longitude != nil {
+		l.Longitude = *req.Longitude
+	}
+	if req.ImagePath != nil {
+		l.ImagePath = *req.ImagePath
 	}
 
 	if err := h.Service.UpdateLandslide(l); err != nil {
@@ -157,9 +179,7 @@ func (h *LandslideHandler) UpdateLandslide(w http.ResponseWriter, r *http.Reques
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(toLandslideResponse(l))
 }
 

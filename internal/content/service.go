@@ -67,7 +67,7 @@ func (s *ContentService) GetAllFundingSources() ([]models.FundingSource, error) 
 	return s.DAO.GetAllFundingSources()
 }
 
-func (s *ContentService) GetFundingSource(id int) (*models.FundingSource) {
+func (s *ContentService) GetFundingSource(id int) (*models.FundingSource, error) {
 	return s.DAO.GetFundingSourceByID(id)
 }
 

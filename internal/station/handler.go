@@ -43,10 +43,10 @@ type CreateStationRequest struct {
 }
 
 type UpdateStationRequest struct {
-	Name                    string     `json:"name"`
-	Latitude                float64    `json:"latitude"`
-	Longitude               float64    `json:"longitude"`
-	IsAvailable             bool       `json:"is_available"`
+	Name                    *string    `json:"name"`
+	Latitude                *float64   `json:"latitude"`
+	Longitude               *float64   `json:"longitude"`
+	IsAvailable             *bool      `json:"is_available"`
 	StationInstallationDate *time.Time `json:"station_installation_date"`
 	LandUnit                *string    `json:"land_unit"`
 	GeologicalUnit          *string    `json:"geological_unit"`
@@ -198,6 +198,22 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
+	// 1. Fetch current
+	s, err := h.Service.GetStation(id)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if s == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Station not found"})
+		return
+	}
+
+	// 2. Decode partial request
 	var req UpdateStationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -206,26 +222,60 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := &models.Station{
-		StationID:               id,
-		Name:                    req.Name,
-		Latitude:                req.Latitude,
-		Longitude:               req.Longitude,
-		IsAvailable:             req.IsAvailable,
-		StationInstallationDate: req.StationInstallationDate,
-		LandUnit:                req.LandUnit,
-		GeologicalUnit:          req.GeologicalUnit,
-		Susceptibility:          req.Susceptibility,
-		Depth:                   req.Depth,
-		LandslideForecast:       req.LandslideForecast,
-		ImagePath:               req.ImagePath,
-		Elevation:               req.Elevation,
-		Slope:                   req.Slope,
-		Collaborator:            req.Collaborator,
-		WC1Max:                  req.WC1Max,
-		WC2Max:                  req.WC2Max,
-		WC3Max:                  req.WC3Max,
-		WC4Max:                  req.WC4Max,
+	// 3. Merge fields only if provided (non-nil)
+	if req.Name != nil {
+		s.Name = *req.Name
+	}
+	if req.Latitude != nil {
+		s.Latitude = *req.Latitude
+	}
+	if req.Longitude != nil {
+		s.Longitude = *req.Longitude
+	}
+	if req.IsAvailable != nil {
+		s.IsAvailable = *req.IsAvailable
+	}
+	if req.StationInstallationDate != nil {
+		s.StationInstallationDate = req.StationInstallationDate
+	}
+	if req.LandUnit != nil {
+		s.LandUnit = req.LandUnit
+	}
+	if req.GeologicalUnit != nil {
+		s.GeologicalUnit = req.GeologicalUnit
+	}
+	if req.Susceptibility != nil {
+		s.Susceptibility = req.Susceptibility
+	}
+	if req.Depth != nil {
+		s.Depth = req.Depth
+	}
+	if req.LandslideForecast != nil {
+		s.LandslideForecast = req.LandslideForecast
+	}
+	if req.ImagePath != nil {
+		s.ImagePath = req.ImagePath
+	}
+	if req.Elevation != nil {
+		s.Elevation = req.Elevation
+	}
+	if req.Slope != nil {
+		s.Slope = req.Slope
+	}
+	if req.Collaborator != nil {
+		s.Collaborator = req.Collaborator
+	}
+	if req.WC1Max != nil {
+		s.WC1Max = req.WC1Max
+	}
+	if req.WC2Max != nil {
+		s.WC2Max = req.WC2Max
+	}
+	if req.WC3Max != nil {
+		s.WC3Max = req.WC3Max
+	}
+	if req.WC4Max != nil {
+		s.WC4Max = req.WC4Max
 	}
 
 	if err := h.Service.UpdateStation(s); err != nil {

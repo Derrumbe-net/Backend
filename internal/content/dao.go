@@ -143,17 +143,17 @@ func (dao *ContentDAO) CreateFundingSource(fs *models.FundingSource) (int64, err
 	return res.LastInsertId()
 }
 
-func (dao *ContentDAO) GetFundingSourceByID(id int) (*models.FundingSource) {
+func (dao *ContentDAO) GetFundingSourceByID(id int) (*models.FundingSource, error) {
 	var fs models.FundingSource
 	query := "SELECT funding_id, name, website_url, image_path, display_order, created_at FROM funding_sources WHERE funding_id = ?"
 	err := dao.DB.QueryRow(query, id).Scan(&fs.FundingID, &fs.Name, &fs.WebsiteURL, &fs.ImagePath, &fs.DisplayOrder, &fs.CreatedAt)
 	if err == sql.ErrNoRows {
-		return nil
+		return nil, nil
 	}
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &fs
+	return &fs, nil
 }
 
 func (dao *ContentDAO) GetAllFundingSources() ([]models.FundingSource, error) {

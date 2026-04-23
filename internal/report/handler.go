@@ -36,18 +36,18 @@ type CreateReportRequest struct {
 }
 
 type UpdateReportRequest struct {
-    LandslideID     int       `json:"landslide_id"`
-    ReportedAt      time.Time `json:"reported_at"`
-    City            string    `json:"city"`
-    Latitude        *float64  `json:"latitude"`
-    Longitude       *float64  `json:"longitude"`
-    PhysicalAddress *string   `json:"physical_address"`
-    ReporterName    *string   `json:"reporter_name"`
-    ReporterPhone   *string   `json:"reporter_phone"`
-    ReporterEmail   *string   `json:"reporter_email"`
-    Description     *string   `json:"description"`
-    ImagePath       *string   `json:"image_path"`
-    IsValidated     *bool     `json:"is_validated"`
+    LandslideID     *int       `json:"landslide_id"`
+    ReportedAt      *time.Time `json:"reported_at"`
+    City            *string    `json:"city"`
+    Latitude        *float64   `json:"latitude"`
+    Longitude       *float64   `json:"longitude"`
+    PhysicalAddress *string    `json:"physical_address"`
+    ReporterName    *string    `json:"reporter_name"`
+    ReporterPhone   *string    `json:"reporter_phone"`
+    ReporterEmail   *string    `json:"reporter_email"`
+    Description     *string    `json:"description"`
+    ImagePath       *string    `json:"image_path"`
+    IsValidated     *bool      `json:"is_validated"`
 }
 
 type ReportResponse struct {
@@ -170,6 +170,22 @@ func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
 
+    // 1. Fetch current
+    res, err := h.Service.GetReport(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if res == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Report not found"})
+        return
+    }
+
+    // 2. Decode partial
     var req UpdateReportRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -178,20 +194,42 @@ func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    res := &models.Report{
-        ReportID:        id,
-        LandslideID:     req.LandslideID,
-        ReportedAt:      req.ReportedAt,
-        City:            req.City,
-        Latitude:        req.Latitude,
-        Longitude:       req.Longitude,
-        PhysicalAddress: req.PhysicalAddress,
-        ReporterName:    req.ReporterName,
-        ReporterPhone:   req.ReporterPhone,
-        ReporterEmail:   req.ReporterEmail,
-        Description:     req.Description,
-        ImagePath:       req.ImagePath,
-        IsValidated:     req.IsValidated,
+    // 3. Merge
+    if req.LandslideID != nil {
+        res.LandslideID = *req.LandslideID
+    }
+    if req.ReportedAt != nil {
+        res.ReportedAt = *req.ReportedAt
+    }
+    if req.City != nil {
+        res.City = *req.City
+    }
+    if req.Latitude != nil {
+        res.Latitude = req.Latitude
+    }
+    if req.Longitude != nil {
+        res.Longitude = req.Longitude
+    }
+    if req.PhysicalAddress != nil {
+        res.PhysicalAddress = req.PhysicalAddress
+    }
+    if req.ReporterName != nil {
+        res.ReporterName = req.ReporterName
+    }
+    if req.ReporterPhone != nil {
+        res.ReporterPhone = req.ReporterPhone
+    }
+    if req.ReporterEmail != nil {
+        res.ReporterEmail = req.ReporterEmail
+    }
+    if req.Description != nil {
+        res.Description = req.Description
+    }
+    if req.ImagePath != nil {
+        res.ImagePath = req.ImagePath
+    }
+    if req.IsValidated != nil {
+        res.IsValidated = req.IsValidated
     }
 
     if err := h.Service.UpdateReport(res); err != nil {
@@ -200,6 +238,7 @@ func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request) {
         json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toReportResponse(res))
 }

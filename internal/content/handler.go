@@ -31,12 +31,12 @@ type CreateProjectRequest struct {
 }
 
 type UpdateProjectRequest struct {
-    Title         string `json:"title"`
-    Description   string `json:"description"`
-    StartYear     any    `json:"start_year"`
-    EndYear       any    `json:"end_year"`
-    ProjectStatus string `json:"project_status"`
-    ImagePath     string `json:"image_url"`
+    Title         *string `json:"title"`
+    Description   *string `json:"description"`
+    StartYear     *any    `json:"start_year"`
+    EndYear       *any    `json:"end_year"`
+    ProjectStatus *string `json:"project_status"`
+    ImagePath     *string `json:"image_url"`
 }
 
 type ProjectResponse struct {
@@ -78,10 +78,10 @@ type CreatePublicationRequest struct {
 }
 
 type UpdatePublicationRequest struct {
-    Title          string     `json:"title"`
-    Description    string     `json:"description"`
-    PublicationURL string     `json:"publication_url"`
-    ImagePath      string     `json:"image_path"`
+    Title          *string    `json:"title"`
+    Description    *string    `json:"description"`
+    PublicationURL *string    `json:"publication_url"`
+    ImagePath      *string    `json:"image_path"`
     PublishedDate  *time.Time `json:"published_date"`
 }
 
@@ -121,10 +121,10 @@ type CreateFundingSourceRequest struct {
 }
 
 type UpdateFundingSourceRequest struct {
-    Name         string `json:"name"`
-    WebsiteURL   string `json:"website_url"`
-    ImagePath    string `json:"image_path"`
-    DisplayOrder int    `json:"display_order"`
+    Name         *string `json:"name"`
+    WebsiteURL   *string `json:"website_url"`
+    ImagePath    *string `json:"image_path"`
+    DisplayOrder *int    `json:"display_order"`
 }
 
 type CreateFacultyMemberRequest struct {
@@ -138,13 +138,13 @@ type CreateFacultyMemberRequest struct {
 }
 
 type UpdateFacultyMemberRequest struct {
-    Name        string `json:"name"`
-    FacultyRole string `json:"faculty_role"`
-    Email       string `json:"email"`
-    Phone       string `json:"phone"`
-    Extension   string `json:"extension"`
-    LinkedinURL string `json:"linkedin_url"`
-    ImagePath   string `json:"image_path"`
+    Name        *string `json:"name"`
+    FacultyRole *string `json:"faculty_role"`
+    Email       *string `json:"email"`
+    Phone       *string `json:"phone"`
+    Extension   *string `json:"extension"`
+    LinkedinURL *string `json:"linkedin_url"`
+    ImagePath   *string `json:"image_path"`
 }
 
 type CreateStudentMemberRequest struct {
@@ -153,16 +153,16 @@ type CreateStudentMemberRequest struct {
 }
 
 type UpdateStudentMemberRequest struct {
-    Name        string `json:"name"`
-    StudentType string `json:"student_type"`
+    Name        *string `json:"name"`
+    StudentType *string `json:"student_type"`
 }
 
 type UpdateOfficeInfoRequest struct {
-    Email          string `json:"email"`
-    Phone          string `json:"phone"`
-    PhoneExt       string `json:"phone_ext"`
-    OfficeLocation string `json:"office_location"`
-    FacebookURL    string `json:"facebook_url"`
+    Email          *string `json:"email"`
+    Phone          *string `json:"phone"`
+    PhoneExt       *string `json:"phone_ext"`
+    OfficeLocation *string `json:"office_location"`
+    FacebookURL    *string `json:"facebook_url"`
 }
 
 // --- Handlers ---
@@ -258,6 +258,22 @@ func (h *ContentHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
 
+    // 1. Fetch existing project
+    p, err := h.Service.GetProject(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if p == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Project not found"})
+        return
+    }
+
+    // 2. Decode partial request
     var req UpdateProjectRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -266,14 +282,24 @@ func (h *ContentHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    p := &models.Project{
-        ProjectID:     id,
-        Title:         req.Title,
-        Description:   req.Description,
-        StartYear:     parseAnyUint16(req.StartYear),
-        EndYear:       parseAnyUint16(req.EndYear),
-        ProjectStatus: req.ProjectStatus,
-        ImagePath:     req.ImagePath,
+    // 3. Merge fields only if provided (non-nil)
+    if req.Title != nil {
+        p.Title = *req.Title
+    }
+    if req.Description != nil {
+        p.Description = *req.Description
+    }
+    if req.StartYear != nil {
+        p.StartYear = parseAnyUint16(*req.StartYear)
+    }
+    if req.EndYear != nil {
+        p.EndYear = parseAnyUint16(*req.EndYear)
+    }
+    if req.ProjectStatus != nil {
+        p.ProjectStatus = *req.ProjectStatus
+    }
+    if req.ImagePath != nil {
+        p.ImagePath = *req.ImagePath
     }
 
     if err := h.Service.UpdateProject(p); err != nil {
@@ -402,6 +428,22 @@ func (h *ContentHandler) UpdatePublication(w http.ResponseWriter, r *http.Reques
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
 
+    // 1. Fetch current
+    p, err := h.Service.GetPublication(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if p == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Publication not found"})
+        return
+    }
+
+    // 2. Decode partial request
     var req UpdatePublicationRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -410,13 +452,21 @@ func (h *ContentHandler) UpdatePublication(w http.ResponseWriter, r *http.Reques
         return
     }
 
-    p := &models.Publication{
-        PublicationID:  id,
-        Title:          req.Title,
-        Description:    req.Description,
-        PublicationURL: req.PublicationURL,
-        ImagePath:      req.ImagePath,
-        PublishedDate:  req.PublishedDate,
+    // 3. Merge
+    if req.Title != nil {
+        p.Title = *req.Title
+    }
+    if req.Description != nil {
+        p.Description = *req.Description
+    }
+    if req.PublicationURL != nil {
+        p.PublicationURL = *req.PublicationURL
+    }
+    if req.ImagePath != nil {
+        p.ImagePath = *req.ImagePath
+    }
+    if req.PublishedDate != nil {
+        p.PublishedDate = req.PublishedDate
     }
 
     if err := h.Service.UpdatePublication(p); err != nil {
@@ -494,7 +544,13 @@ func (h *ContentHandler) GetAllFundingSources(w http.ResponseWriter, r *http.Req
 func (h *ContentHandler) GetFundingSource(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
-    fs := h.Service.GetFundingSource(id)
+    fs, err := h.Service.GetFundingSource(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
     if fs == nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusNotFound)
@@ -537,6 +593,23 @@ func (h *ContentHandler) CreateFundingSource(w http.ResponseWriter, r *http.Requ
 func (h *ContentHandler) UpdateFundingSource(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
+
+    // 1. Fetch current
+    fs, err := h.Service.GetFundingSource(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if fs == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Funding source not found"})
+        return
+    }
+
+    // 2. Decode partial
     var req UpdateFundingSourceRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -544,13 +617,21 @@ func (h *ContentHandler) UpdateFundingSource(w http.ResponseWriter, r *http.Requ
         json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
-    fs := &models.FundingSource{
-        FundingID:    id,
-        Name:         req.Name,
-        WebsiteURL:   req.WebsiteURL,
-        ImagePath:    req.ImagePath,
-        DisplayOrder: req.DisplayOrder,
+
+    // 3. Merge
+    if req.Name != nil {
+        fs.Name = *req.Name
     }
+    if req.WebsiteURL != nil {
+        fs.WebsiteURL = *req.WebsiteURL
+    }
+    if req.ImagePath != nil {
+        fs.ImagePath = *req.ImagePath
+    }
+    if req.DisplayOrder != nil {
+        fs.DisplayOrder = *req.DisplayOrder
+    }
+
     if err := h.Service.UpdateFundingSource(fs); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
@@ -599,8 +680,8 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
 func (h *ContentHandler) ServeFundingSourceImage(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
-    p := h.Service.GetFundingSource(id)
-    if p == nil || p.ImagePath == "" {
+    p, err := h.Service.GetFundingSource(id)
+    if err != nil || p == nil || p.ImagePath == "" {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusNotFound)
         json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
@@ -669,6 +750,23 @@ func (h *ContentHandler) CreateFacultyMember(w http.ResponseWriter, r *http.Requ
 func (h *ContentHandler) UpdateFacultyMember(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
+
+    // 1. Fetch current
+    fm, err := h.Service.GetFacultyMember(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if fm == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Faculty member not found"})
+        return
+    }
+
+    // 2. Decode partial
     var req UpdateFacultyMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -676,16 +774,30 @@ func (h *ContentHandler) UpdateFacultyMember(w http.ResponseWriter, r *http.Requ
         json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
-    fm := &models.FacultyMember{
-        FacultyMemberID: id,
-        Name:            req.Name,
-        FacultyRole:     req.FacultyRole,
-        Email:           req.Email,
-        Phone:           req.Phone,
-        Extension:       req.Extension,
-        LinkedinURL:     req.LinkedinURL,
-        ImagePath:       req.ImagePath,
+
+    // 3. Merge
+    if req.Name != nil {
+        fm.Name = *req.Name
     }
+    if req.FacultyRole != nil {
+        fm.FacultyRole = *req.FacultyRole
+    }
+    if req.Email != nil {
+        fm.Email = *req.Email
+    }
+    if req.Phone != nil {
+        fm.Phone = *req.Phone
+    }
+    if req.Extension != nil {
+        fm.Extension = *req.Extension
+    }
+    if req.LinkedinURL != nil {
+        fm.LinkedinURL = *req.LinkedinURL
+    }
+    if req.ImagePath != nil {
+        fm.ImagePath = *req.ImagePath
+    }
+
     if err := h.Service.UpdateFacultyMember(fm); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
@@ -799,6 +911,23 @@ func (h *ContentHandler) CreateStudentMember(w http.ResponseWriter, r *http.Requ
 func (h *ContentHandler) UpdateStudentMember(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
+
+    // 1. Fetch current
+    sm, err := h.Service.GetStudentMember(id)
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if sm == nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Student member not found"})
+        return
+    }
+
+    // 2. Decode partial
     var req UpdateStudentMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -806,11 +935,15 @@ func (h *ContentHandler) UpdateStudentMember(w http.ResponseWriter, r *http.Requ
         json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
-    sm := &models.StudentMember{
-        StudentMemberID: id,
-        Name:            req.Name,
-        StudentType:     req.StudentType,
+
+    // 3. Merge
+    if req.Name != nil {
+        sm.Name = *req.Name
     }
+    if req.StudentType != nil && *req.StudentType != "" { // Special check for ENUM
+        sm.StudentType = *req.StudentType
+    }
+
     if err := h.Service.UpdateStudentMember(sm); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
@@ -853,6 +986,19 @@ func (h *ContentHandler) GetOfficeInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ContentHandler) UpdateOfficeInfo(w http.ResponseWriter, r *http.Request) {
+    // 1. Fetch current
+    oi, err := h.Service.GetOfficeInfo()
+    if err != nil {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+        return
+    }
+    if oi == nil {
+        oi = &models.OfficeInfo{ID: 1} // Default if none exists
+    }
+
+    // 2. Decode partial
     var req UpdateOfficeInfoRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         w.Header().Set("Content-Type", "application/json")
@@ -860,21 +1006,24 @@ func (h *ContentHandler) UpdateOfficeInfo(w http.ResponseWriter, r *http.Request
         json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
-    // We assume we update the only row (ID 1 for simplicity or from current latest)
-    current, _ := h.Service.GetOfficeInfo()
-    id := 1
-    if current != nil {
-        id = current.ID
+
+    // 3. Merge
+    if req.Email != nil {
+        oi.Email = *req.Email
+    }
+    if req.Phone != nil {
+        oi.Phone = *req.Phone
+    }
+    if req.PhoneExt != nil {
+        oi.PhoneExt = *req.PhoneExt
+    }
+    if req.OfficeLocation != nil {
+        oi.OfficeLocation = *req.OfficeLocation
+    }
+    if req.FacebookURL != nil {
+        oi.FacebookURL = *req.FacebookURL
     }
 
-    oi := &models.OfficeInfo{
-        ID:             id,
-        Email:          req.Email,
-        Phone:          req.Phone,
-        PhoneExt:       req.PhoneExt,
-        OfficeLocation: req.OfficeLocation,
-        FacebookURL:    req.FacebookURL,
-    }
     if err := h.Service.UpdateOfficeInfo(oi); err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
