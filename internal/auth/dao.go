@@ -17,7 +17,7 @@ func NewAdminDAO(db *sql.DB) *AdminDAO {
 }
 
 // CreateAdmin creates a new admin and a verification token
-func (dao *AdminDAO) CreateAdmin(email, hashedPassword, name string) (int64, string, error) {
+func (dao *AdminDAO) CreateAdmin(email, hashedPassword string) (int64, string, error) {
 	tx, err := dao.DB.Begin()
 	if err != nil {
 		return 0, "", err
@@ -25,8 +25,8 @@ func (dao *AdminDAO) CreateAdmin(email, hashedPassword, name string) (int64, str
 	defer tx.Rollback()
 
 	// Insert into admins table
-	res, err := tx.Exec("INSERT INTO admins (email, password, name, is_email_verified, is_authorized) VALUES (?, ?, ?, 0, 0)",
-		email, hashedPassword, name)
+	res, err := tx.Exec("INSERT INTO admins (email, password, is_email_verified, is_authorized) VALUES (?, ?, ?, 0, 0)",
+		email, hashedPassword)
 	if err != nil {
 		return 0, "", err
 	}
@@ -55,8 +55,8 @@ func (dao *AdminDAO) CreateAdmin(email, hashedPassword, name string) (int64, str
 
 func (dao *AdminDAO) GetAdminByEmail(email string) (*models.Admin, error) {
 	var admin models.Admin
-	query := "SELECT admin_id, email, password, name, is_authorized, is_email_verified FROM admins WHERE email = ?"
-	err := dao.DB.QueryRow(query, email).Scan(&admin.AdminID, &admin.Email, &admin.Password, &admin.Name, &admin.IsAuthorized, &admin.IsEmailVerified)
+	query := "SELECT admin_id, email, password, is_authorized, is_email_verified FROM admins WHERE email = ?"
+	err := dao.DB.QueryRow(query, email).Scan(&admin.AdminID, &admin.Email, &admin.Password, &admin.IsAuthorized, &admin.IsEmailVerified)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -68,8 +68,8 @@ func (dao *AdminDAO) GetAdminByEmail(email string) (*models.Admin, error) {
 
 func (dao *AdminDAO) GetAdminByID(id int) (*models.Admin, error) {
 	var admin models.Admin
-	query := "SELECT admin_id, email, password, name, is_authorized, is_email_verified FROM admins WHERE admin_id = ?"
-	err := dao.DB.QueryRow(query, id).Scan(&admin.AdminID, &admin.Email, &admin.Password, &admin.Name, &admin.IsAuthorized, &admin.IsEmailVerified)
+	query := "SELECT admin_id, email, password, is_authorized, is_email_verified FROM admins WHERE admin_id = ?"
+	err := dao.DB.QueryRow(query, id).Scan(&admin.AdminID, &admin.Email, &admin.Password, &admin.IsAuthorized, &admin.IsEmailVerified)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -82,11 +82,11 @@ func (dao *AdminDAO) GetAdminByID(id int) (*models.Admin, error) {
 func (dao *AdminDAO) GetAdminByToken(token string) (*models.Admin, error) {
 	var admin models.Admin
 	query := `
-		SELECT a.admin_id, a.email, a.name, a.is_authorized, a.is_email_verified 
+		SELECT a.admin_id, a.email, a.is_authorized, a.is_email_verified 
 		FROM admins a 
 		JOIN admin_tokens t ON a.admin_id = t.admin_id 
 		WHERE t.verification_token = ? AND t.token_expires_at > NOW()`
-	err := dao.DB.QueryRow(query, token).Scan(&admin.AdminID, &admin.Email, &admin.Name, &admin.IsAuthorized, &admin.IsEmailVerified)
+	err := dao.DB.QueryRow(query, token).Scan(&admin.AdminID, &admin.Email, &admin.IsAuthorized, &admin.IsEmailVerified)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -117,7 +117,7 @@ func (dao *AdminDAO) VerifyEmail(adminID int) error {
 }
 
 func (dao *AdminDAO) GetAllAdmins() ([]models.Admin, error) {
-	rows, err := dao.DB.Query("SELECT admin_id, email, name, is_authorized, is_email_verified FROM admins")
+	rows, err := dao.DB.Query("SELECT admin_id, email, is_authorized, is_email_verified FROM admins")
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (dao *AdminDAO) GetAllAdmins() ([]models.Admin, error) {
 	var admins []models.Admin
 	for rows.Next() {
 		var a models.Admin
-		if err := rows.Scan(&a.AdminID, &a.Email, &a.Name, &a.IsAuthorized, &a.IsEmailVerified); err != nil {
+		if err := rows.Scan(&a.AdminID, &a.Email, &a.IsAuthorized, &a.IsEmailVerified); err != nil {
 			return nil, err
 		}
 		admins = append(admins, a)

@@ -23,7 +23,7 @@ func NewAuthService(dao *AdminDAO, emailService *email.EmailService) *AuthServic
 	}
 }
 
-func (s *AuthService) SignUp(email, password, name string) (int64, string, error) {
+func (s *AuthService) SignUp(email, password string) (int64, string, error) {
 	// Check if admin already exists
 	existing, _ := s.DAO.GetAdminByEmail(email)
 	if existing != nil {
@@ -37,7 +37,7 @@ func (s *AuthService) SignUp(email, password, name string) (int64, string, error
 	}
 
 	// Create in DB
-	id, token, err := s.DAO.CreateAdmin(email, string(hashedPassword), name)
+	id, token, err := s.DAO.CreateAdmin(email, string(hashedPassword))
 	if err != nil {
 		return 0, "", err
 	}

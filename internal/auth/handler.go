@@ -23,7 +23,6 @@ func NewAdminHandler(service *AuthService) *AdminHandler {
 type SignUpAdminRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-	Name     string `json:"name"`
 }
 
 type LoginAdminRequest struct {
@@ -38,7 +37,6 @@ type UpdateAuthorizationRequest struct {
 type AdminResponse struct {
 	AdminID         int    `json:"admin_id"`
 	Email           string `json:"email"`
-	Name            string `json:"name"`
 	IsAuthorized    bool   `json:"is_authorized"`
 	IsEmailVerified bool   `json:"is_email_verified"`
 }
@@ -47,7 +45,6 @@ func toAdminResponse(a *models.Admin) AdminResponse {
 	return AdminResponse{
 		AdminID:         a.AdminID,
 		Email:           a.Email,
-		Name:            a.Name,
 		IsAuthorized:    a.IsAuthorized,
 		IsEmailVerified: a.IsEmailVerified,
 	}
@@ -75,7 +72,7 @@ func (h *AdminHandler) SignUpAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, token, err := h.Service.SignUp(req.Email, req.Password, req.Name)
+	id, token, err := h.Service.SignUp(req.Email, req.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

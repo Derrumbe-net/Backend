@@ -16,7 +16,8 @@ func RegisterRoutes(mux *http.ServeMux, handler *StationHandler) {
 	mux.HandleFunc("GET /stations/item/{id}/image/{type}", handler.ServeStationImage)
 	mux.HandleFunc("GET /stations/images/{filename}", handler.ServeStationImage)
 	mux.HandleFunc("GET /stations/history/{id}/wc", handler.GetStationWcHistory)
-	mux.HandleFderrumbes-dbtStationFileData)
+	mux.HandleFunc("GET /stations/files/data", handler.GetAllStationFilesData)
+	mux.HandleFunc("GET /stations/files/data/{id}", handler.GetStationFileData)
 
 	// Station Protected Routes
 	mux.Handle("POST /stations", protected(handler.CreateStation))
