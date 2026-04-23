@@ -292,7 +292,7 @@ func (h *ReportHandler) UploadReportImage(w http.ResponseWriter, r *http.Request
     id, _ := strconv.Atoi(idStr)
 
     destDir := filepath.Join("uploads", "reports", idStr)
-    path, err := utils.UploadFile(r, "image", destDir, "")
+    path, err := utils.UploadFile(r, "image_file", destDir, "")
     if err != nil {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
