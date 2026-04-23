@@ -67,9 +67,12 @@ func toLandslideResponses(landslides []models.Landslide) []LandslideResponse {
 func (h *LandslideHandler) GetAllLandslides(w http.ResponseWriter, r *http.Request) {
 	landslides, err := h.Service.GetAllLandslides()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toLandslideResponses(landslides))
 }
 
@@ -79,20 +82,27 @@ func (h *LandslideHandler) GetLandslide(w http.ResponseWriter, r *http.Request) 
 
 	l, err := h.Service.GetLandslide(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	if l == nil {
-		http.Error(w, "Landslide not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Landslide not found"})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toLandslideResponse(l))
 }
 
 func (h *LandslideHandler) CreateLandslide(w http.ResponseWriter, r *http.Request) {
 	var req CreateLandslideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
@@ -109,11 +119,14 @@ func (h *LandslideHandler) CreateLandslide(w http.ResponseWriter, r *http.Reques
 
 	id, err := h.Service.CreateLandslide(l)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	l.LandslideID = int(id)
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(toLandslideResponse(l))
 }
@@ -124,7 +137,9 @@ func (h *LandslideHandler) UpdateLandslide(w http.ResponseWriter, r *http.Reques
 
 	var req UpdateLandslideRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
@@ -137,10 +152,13 @@ func (h *LandslideHandler) UpdateLandslide(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.Service.UpdateLandslide(l); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(toLandslideResponse(l))
 }
@@ -150,7 +168,9 @@ func (h *LandslideHandler) DeleteLandslide(w http.ResponseWriter, r *http.Reques
 	id, _ := strconv.Atoi(idStr)
 
 	if err := h.Service.DeleteLandslide(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -164,10 +184,13 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode([]string{})
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -177,6 +200,7 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 			images = append(images, f.Name())
 		}
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(images)
 }
 
@@ -194,14 +218,18 @@ func (h *LandslideHandler) ServeLandslideImage(w http.ResponseWriter, r *http.Re
 		id, _ := strconv.Atoi(idStr)
 		l, err := h.Service.GetLandslide(id)
 		if err != nil || l == nil || l.ImagePath == "" {
-			http.Error(w, "Image not found", http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
 			return
 		}
 		path = l.ImagePath
 	}
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		http.Error(w, "Image not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
 		return
 	}
 	http.ServeFile(w, r, path)
@@ -214,14 +242,19 @@ func (h *LandslideHandler) UploadLandslideImage(w http.ResponseWriter, r *http.R
 	destDir := filepath.Join("uploads", "landslides", idStr)
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	if err := h.Service.UpdateLandslideImage(id, path); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }

@@ -172,9 +172,12 @@ type UpdateOfficeInfoRequest struct {
 func (h *ContentHandler) GetAllProjects(w http.ResponseWriter, r *http.Request) {
     projects, err := h.Service.GetAllProjects()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toProjectResponses(projects))
 }
 
@@ -183,20 +186,27 @@ func (h *ContentHandler) GetProject(w http.ResponseWriter, r *http.Request) {
     id, _ := strconv.Atoi(idStr)
     p, err := h.Service.GetProject(id)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     if p == nil {
-        http.Error(w, "Project not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Project not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toProjectResponse(p))
 }
 
 func (h *ContentHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
     var req CreateProjectRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
 
@@ -211,10 +221,13 @@ func (h *ContentHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 
     id, err := h.Service.CreateProject(p)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     p.ProjectID = int(id)
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(toProjectResponse(p))
 }
@@ -225,7 +238,9 @@ func (h *ContentHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
     var req UpdateProjectRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
 
@@ -240,9 +255,12 @@ func (h *ContentHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
     }
 
     if err := h.Service.UpdateProject(p); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toProjectResponse(p))
 }
 
@@ -250,7 +268,9 @@ func (h *ContentHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
     if err := h.Service.DeleteProject(id); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)
@@ -263,7 +283,9 @@ func (h *ContentHandler) ServeProjectImage(w http.ResponseWriter, r *http.Reques
         id, _ := strconv.Atoi(idStr)
         p, err := h.Service.GetProject(id)
         if err != nil || p == nil || p.ImagePath == "" {
-            http.Error(w, "Image not found", http.StatusNotFound)
+            w.Header().Set("Content-Type", "application/json")
+            w.WriteHeader(http.StatusNotFound)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
             return
         }
         http.ServeFile(w, r, p.ImagePath)
@@ -272,7 +294,9 @@ func (h *ContentHandler) ServeProjectImage(w http.ResponseWriter, r *http.Reques
 
     path := filepath.Join("uploads", "projects", filename)
     if _, err := os.Stat(path); os.IsNotExist(err) {
-        http.Error(w, "Image not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
         return
     }
     http.ServeFile(w, r, path)
@@ -285,15 +309,20 @@ func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Reque
     destDir := filepath.Join("uploads", "projects")
     path, err := utils.UploadFile(r, "image", destDir, "")
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
 
     if err := h.Service.UpdateProjectImage(id, path); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
 
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }
 
@@ -301,9 +330,12 @@ func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Reque
 func (h *ContentHandler) GetAllPublications(w http.ResponseWriter, r *http.Request) {
     publications, err := h.Service.GetAllPublications()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toPublicationResponses(publications))
 }
 
@@ -312,20 +344,27 @@ func (h *ContentHandler) GetPublication(w http.ResponseWriter, r *http.Request) 
     id, _ := strconv.Atoi(idStr)
     p, err := h.Service.GetPublication(id)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     if p == nil {
-        http.Error(w, "Publication not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Publication not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toPublicationResponse(p))
 }
 
 func (h *ContentHandler) CreatePublication(w http.ResponseWriter, r *http.Request) {
     var req CreatePublicationRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
 
@@ -339,10 +378,13 @@ func (h *ContentHandler) CreatePublication(w http.ResponseWriter, r *http.Reques
 
     id, err := h.Service.CreatePublication(p)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     p.PublicationID = int(id)
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(toPublicationResponse(p))
 }
@@ -353,7 +395,9 @@ func (h *ContentHandler) UpdatePublication(w http.ResponseWriter, r *http.Reques
 
     var req UpdatePublicationRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
 
@@ -367,9 +411,12 @@ func (h *ContentHandler) UpdatePublication(w http.ResponseWriter, r *http.Reques
     }
 
     if err := h.Service.UpdatePublication(p); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(toPublicationResponse(p))
 }
 
@@ -377,7 +424,9 @@ func (h *ContentHandler) DeletePublication(w http.ResponseWriter, r *http.Reques
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
     if err := h.Service.DeletePublication(id); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)
@@ -390,7 +439,9 @@ func (h *ContentHandler) ServePublicationImage(w http.ResponseWriter, r *http.Re
         id, _ := strconv.Atoi(idStr)
         p, err := h.Service.GetPublication(id)
         if err != nil || p == nil || p.ImagePath == "" {
-            http.Error(w, "Image not found", http.StatusNotFound)
+            w.Header().Set("Content-Type", "application/json")
+            w.WriteHeader(http.StatusNotFound)
+            json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
             return
         }
         http.ServeFile(w, r, p.ImagePath)
@@ -399,7 +450,9 @@ func (h *ContentHandler) ServePublicationImage(w http.ResponseWriter, r *http.Re
 
     path := filepath.Join("uploads", "publications", filename)
     if _, err := os.Stat(path); os.IsNotExist(err) {
-        http.Error(w, "Image not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
         return
     }
     http.ServeFile(w, r, path)
@@ -412,15 +465,20 @@ func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.R
     destDir := filepath.Join("uploads", "publications")
     path, err := utils.UploadFile(r, "image", destDir, "")
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
 
     if err := h.Service.UpdatePublicationImage(id, path); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
 
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }
 
@@ -428,9 +486,12 @@ func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.R
 func (h *ContentHandler) GetAllFundingSources(w http.ResponseWriter, r *http.Request) {
     sources, err := h.Service.GetAllFundingSources()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(sources)
 }
 
@@ -439,16 +500,21 @@ func (h *ContentHandler) GetFundingSource(w http.ResponseWriter, r *http.Request
     id, _ := strconv.Atoi(idStr)
     fs := h.Service.GetFundingSource(id)
     if fs == nil {
-        http.Error(w, "Funding source not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Funding source not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(fs)
 }
 
 func (h *ContentHandler) CreateFundingSource(w http.ResponseWriter, r *http.Request) {
     var req CreateFundingSourceRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
 
@@ -461,10 +527,13 @@ func (h *ContentHandler) CreateFundingSource(w http.ResponseWriter, r *http.Requ
 
     id, err := h.Service.CreateFundingSource(fs)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     fs.FundingID = int(id)
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(fs)
 }
@@ -474,7 +543,9 @@ func (h *ContentHandler) UpdateFundingSource(w http.ResponseWriter, r *http.Requ
     id, _ := strconv.Atoi(idStr)
     var req UpdateFundingSourceRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     fs := &models.FundingSource{
@@ -485,9 +556,12 @@ func (h *ContentHandler) UpdateFundingSource(w http.ResponseWriter, r *http.Requ
         DisplayOrder: req.DisplayOrder,
     }
     if err := h.Service.UpdateFundingSource(fs); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(fs)
 }
 
@@ -495,7 +569,9 @@ func (h *ContentHandler) DeleteFundingSource(w http.ResponseWriter, r *http.Requ
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
     if err := h.Service.DeleteFundingSource(id); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)
@@ -507,13 +583,18 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
     destDir := filepath.Join("uploads", "funding")
     path, err := utils.UploadFile(r, "image", destDir, "")
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     if err := h.Service.UpdateFundingSourceImage(id, path); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }
 
@@ -521,9 +602,12 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
 func (h *ContentHandler) GetAllFacultyMembers(w http.ResponseWriter, r *http.Request) {
     members, err := h.Service.GetAllFacultyMembers()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(members)
 }
 
@@ -532,16 +616,21 @@ func (h *ContentHandler) GetFacultyMember(w http.ResponseWriter, r *http.Request
     id, _ := strconv.Atoi(idStr)
     fm, err := h.Service.GetFacultyMember(id)
     if err != nil || fm == nil {
-        http.Error(w, "Faculty member not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Faculty member not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(fm)
 }
 
 func (h *ContentHandler) CreateFacultyMember(w http.ResponseWriter, r *http.Request) {
     var req CreateFacultyMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     fm := &models.FacultyMember{
@@ -555,10 +644,13 @@ func (h *ContentHandler) CreateFacultyMember(w http.ResponseWriter, r *http.Requ
     }
     id, err := h.Service.CreateFacultyMember(fm)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     fm.FacultyMemberID = int(id)
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(fm)
 }
@@ -568,7 +660,9 @@ func (h *ContentHandler) UpdateFacultyMember(w http.ResponseWriter, r *http.Requ
     id, _ := strconv.Atoi(idStr)
     var req UpdateFacultyMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     fm := &models.FacultyMember{
@@ -582,9 +676,12 @@ func (h *ContentHandler) UpdateFacultyMember(w http.ResponseWriter, r *http.Requ
         ImagePath:       req.ImagePath,
     }
     if err := h.Service.UpdateFacultyMember(fm); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(fm)
 }
 
@@ -592,7 +689,9 @@ func (h *ContentHandler) DeleteFacultyMember(w http.ResponseWriter, r *http.Requ
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
     if err := h.Service.DeleteFacultyMember(id); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)
@@ -604,13 +703,18 @@ func (h *ContentHandler) UploadFacultyMemberImage(w http.ResponseWriter, r *http
     destDir := filepath.Join("uploads", "faculty")
     path, err := utils.UploadFile(r, "image", destDir, "")
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     if err := h.Service.UpdateFacultyMemberImage(id, path); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }
 
@@ -618,9 +722,12 @@ func (h *ContentHandler) UploadFacultyMemberImage(w http.ResponseWriter, r *http
 func (h *ContentHandler) GetAllStudentMembers(w http.ResponseWriter, r *http.Request) {
     members, err := h.Service.GetAllStudentMembers()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(members)
 }
 
@@ -629,16 +736,21 @@ func (h *ContentHandler) GetStudentMember(w http.ResponseWriter, r *http.Request
     id, _ := strconv.Atoi(idStr)
     sm, err := h.Service.GetStudentMember(id)
     if err != nil || sm == nil {
-        http.Error(w, "Student member not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Student member not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(sm)
 }
 
 func (h *ContentHandler) CreateStudentMember(w http.ResponseWriter, r *http.Request) {
     var req CreateStudentMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     sm := &models.StudentMember{
@@ -647,10 +759,13 @@ func (h *ContentHandler) CreateStudentMember(w http.ResponseWriter, r *http.Requ
     }
     id, err := h.Service.CreateStudentMember(sm)
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     sm.StudentMemberID = int(id)
+    w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(sm)
 }
@@ -660,7 +775,9 @@ func (h *ContentHandler) UpdateStudentMember(w http.ResponseWriter, r *http.Requ
     id, _ := strconv.Atoi(idStr)
     var req UpdateStudentMemberRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     sm := &models.StudentMember{
@@ -669,9 +786,12 @@ func (h *ContentHandler) UpdateStudentMember(w http.ResponseWriter, r *http.Requ
         StudentType:     req.StudentType,
     }
     if err := h.Service.UpdateStudentMember(sm); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(sm)
 }
 
@@ -679,7 +799,9 @@ func (h *ContentHandler) DeleteStudentMember(w http.ResponseWriter, r *http.Requ
     idStr := r.PathValue("id")
     id, _ := strconv.Atoi(idStr)
     if err := h.Service.DeleteStudentMember(id); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     w.WriteHeader(http.StatusNoContent)
@@ -689,20 +811,27 @@ func (h *ContentHandler) DeleteStudentMember(w http.ResponseWriter, r *http.Requ
 func (h *ContentHandler) GetOfficeInfo(w http.ResponseWriter, r *http.Request) {
     oi, err := h.Service.GetOfficeInfo()
     if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
     if oi == nil {
-        http.Error(w, "Office info not found", http.StatusNotFound)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Office info not found"})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(oi)
 }
 
 func (h *ContentHandler) UpdateOfficeInfo(w http.ResponseWriter, r *http.Request) {
     var req UpdateOfficeInfoRequest
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
         return
     }
     // We assume we update the only row (ID 1 for simplicity or from current latest)
@@ -721,8 +850,11 @@ func (h *ContentHandler) UpdateOfficeInfo(w http.ResponseWriter, r *http.Request
         FacebookURL:    req.FacebookURL,
     }
     if err := h.Service.UpdateOfficeInfo(oi); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
         return
     }
+    w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(oi)
 }

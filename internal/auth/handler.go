@@ -31,13 +31,13 @@ type LoginAdminRequest struct {
 }
 
 type UpdateAuthorizationRequest struct {
-	IsAuthorized bool `json:"is_authorized"`
+	IsAuthorized bool `json:"isAuthorized"`
 }
 
 type AdminResponse struct {
 	AdminID         int    `json:"admin_id"`
 	Email           string `json:"email"`
-	IsAuthorized    bool   `json:"is_authorized"`
+	IsAuthorized    bool   `json:"isAuthorized"`
 	IsEmailVerified bool   `json:"is_email_verified"`
 }
 
@@ -63,21 +63,28 @@ func toAdminResponses(admins []models.Admin) []AdminResponse {
 func (h *AdminHandler) SignUpAdmin(w http.ResponseWriter, r *http.Request) {
 	var req SignUpAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, "Email and password are required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Email and password are required"})
 		return
 	}
 
 	id, token, err := h.Service.SignUp(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"admin_id":           id,
@@ -89,16 +96,21 @@ func (h *AdminHandler) SignUpAdmin(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
 	var req LoginAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
 	token, err := h.Service.Login(req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"token": token,
 	})
@@ -107,15 +119,20 @@ func (h *AdminHandler) LoginAdmin(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		http.Error(w, "Token is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Token is required"})
 		return
 	}
 
 	if err := h.Service.VerifyEmail(token); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Email verified successfully"})
 }
@@ -123,9 +140,12 @@ func (h *AdminHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 func (h *AdminHandler) GetAllAdmins(w http.ResponseWriter, r *http.Request) {
 	admins, err := h.Service.GetAllAdmins()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toAdminResponses(admins))
 }
 
@@ -135,15 +155,20 @@ func (h *AdminHandler) GetAdmin(w http.ResponseWriter, r *http.Request) {
 
 	admin, err := h.Service.GetAdmin(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	if admin == nil {
-		http.Error(w, "Admin not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Admin not found"})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toAdminResponse(admin))
 }
 
@@ -153,12 +178,16 @@ func (h *AdminHandler) UpdateAuthorization(w http.ResponseWriter, r *http.Reques
 
 	var req UpdateAuthorizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
 	if err := h.Service.UpdateAuthorization(id, req.IsAuthorized); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -171,7 +200,9 @@ func (h *AdminHandler) DeleteAdmin(w http.ResponseWriter, r *http.Request) {
 	superAdminEmail := os.Getenv("SUPERADMIN_EMAIL")
 
 	if !ok || superAdminEmail == "" || strings.ToLower(requesterEmail) != strings.ToLower(superAdminEmail) {
-		http.Error(w, "Unauthorized: Only Super Admin can delete admins", http.StatusForbidden)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: Only Super Admin can delete admins"})
 		return
 	}
 
@@ -179,7 +210,9 @@ func (h *AdminHandler) DeleteAdmin(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idStr)
 
 	if err := h.Service.DeleteAdmin(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 

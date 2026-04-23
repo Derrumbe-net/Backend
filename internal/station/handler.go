@@ -107,9 +107,12 @@ func toStationResponses(stations []models.Station) []StationResponse {
 func (h *StationHandler) GetAllStations(w http.ResponseWriter, r *http.Request) {
 	stations, err := h.Service.GetAllStations()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toStationResponses(stations))
 }
 
@@ -118,20 +121,27 @@ func (h *StationHandler) GetStation(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idStr)
 	s, err := h.Service.GetStation(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	if s == nil {
-		http.Error(w, "Station not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Station not found"})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toStationResponse(s))
 }
 
 func (h *StationHandler) CreateStation(w http.ResponseWriter, r *http.Request) {
 	var req CreateStationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
@@ -154,10 +164,13 @@ func (h *StationHandler) CreateStation(w http.ResponseWriter, r *http.Request) {
 
 	id, err := h.Service.CreateStation(s)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	s.StationID = int(id)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(toStationResponse(s))
 }
@@ -168,7 +181,9 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 
 	var req UpdateStationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
@@ -191,9 +206,12 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Service.UpdateStation(s); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toStationResponse(s))
 }
 
@@ -201,7 +219,9 @@ func (h *StationHandler) DeleteStation(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 	if err := h.Service.DeleteStation(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -218,7 +238,9 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 
 		// Safely check the pointer for ImagePath
 		if err != nil || s == nil || s.ImagePath == nil || *s.ImagePath == "" {
-			http.Error(w, "Image not found", http.StatusNotFound)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
 			return
 		}
 
@@ -227,13 +249,17 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		http.Error(w, "Image type not supported", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image type not supported"})
 		return
 	}
 
 	path := filepath.Join("uploads", "stations", filename)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		http.Error(w, "Image not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
 		return
 	}
 	http.ServeFile(w, r, path)
@@ -246,15 +272,20 @@ func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http
 	destDir := filepath.Join("uploads", "stations")
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
 	if err := h.Service.UpdateStationSensorImage(id, path); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
 }
 
@@ -263,16 +294,21 @@ func (h *StationHandler) GetStationWcHistory(w http.ResponseWriter, r *http.Requ
 	id, _ := strconv.Atoi(idStr)
 	readings, err := h.Service.GetStationWcHistory(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(readings)
 }
 
 func (h *StationHandler) GetAllStationFilesData(w http.ResponseWriter, r *http.Request) {
 	data, err := h.Service.GetAllStationFilesData()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -283,13 +319,17 @@ func (h *StationHandler) GetStationFileData(w http.ResponseWriter, r *http.Reque
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid station ID", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid station ID"})
 		return
 	}
 
 	readings, err := h.Service.GetStationFileData(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
