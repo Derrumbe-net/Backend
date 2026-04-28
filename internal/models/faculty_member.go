@@ -4,10 +4,10 @@ package models
 type FacultyMember struct {
 	FacultyMemberID int    `json:"faculty_member_id"`
 	Name            string `json:"name"`
-	Role            string `json:"role"`
+	FacultyRole     string `json:"faculty_role"`
 	Email           string `json:"email"`
 	Phone           string `json:"phone"`
 	Extension       string `json:"extension"`
 	LinkedinURL     string `json:"linkedin_url"`
-	ProfileImagePath string `json:"profile_image_path"`
+	ImagePath       string `json:"image_path"`
 }

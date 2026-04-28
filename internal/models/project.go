@@ -8,5 +8,5 @@ type Project struct {
 	StartYear     uint16 `json:"start_year"`
 	EndYear       uint16 `json:"end_year"`
 	ProjectStatus string `json:"project_status"`
-	ImagePath     string `json:"image_path"`
+	ImagePath     string `json:"image_url"`
 }
