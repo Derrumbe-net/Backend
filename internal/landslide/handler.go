@@ -2,6 +2,7 @@ package landslide
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -195,12 +196,40 @@ func (h *LandslideHandler) DeleteLandslide(w http.ResponseWriter, r *http.Reques
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
-	// If images are stored by ID in subfolders
-	dir := filepath.Join("uploads", "landslides", idStr)
-	
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid ID format"})
+		return
+	}
+	l, err := h.Service.GetLandslide(id)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if l == nil || l.ImagePath == "" {
+		// If the landslide doesn't exist, or it has no image path, return empty
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]string{})
+		return
+	}
+
+	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+		log.Println("BASE_PATH was empty, falling back to 'data'")
+	}
+
+	dir := filepath.Join(baseDir, "landslides", l.ImagePath)
+
+	log.Printf("Searching for images in exact directory: '%s'\n", dir)
+
+	// 4. Read the directory
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -220,6 +249,7 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 			images = append(images, f.Name())
 		}
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(images)
 }
@@ -227,12 +257,12 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 func (h *LandslideHandler) ServeLandslideImage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	filename := r.PathValue("filename")
-	
+
 	var path string
 	if idStr != "" && filename != "" {
-		path = filepath.Join("uploads", "landslides", idStr, filename)
+		path = filepath.Join("landslides", idStr, filename)
 	} else if filename != "" {
-		path = filepath.Join("uploads", "landslides", filename)
+		path = filepath.Join("landslides", filename)
 	} else {
 		// Get by ID (main image)
 		id, _ := strconv.Atoi(idStr)

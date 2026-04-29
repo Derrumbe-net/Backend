@@ -2,6 +2,7 @@ package content
 
 import (
 	"database/sql"
+
 	"github.com/Derrumbe-net/Backend/internal/models"
 )
 
@@ -265,8 +266,8 @@ func (dao *ContentDAO) CreateStudentMember(sm *models.StudentMember) (int64, err
 
 func (dao *ContentDAO) GetStudentMemberByID(id int) (*models.StudentMember, error) {
 	var sm models.StudentMember
-	query := "SELECT student_member_id, name, student_type FROM student_members WHERE student_member_id = ?"
-	err := dao.DB.QueryRow(query, id).Scan(&sm.StudentMemberID, &sm.Name, &sm.StudentType)
+	query := "SELECT student_member_id, name, student_type, image_path FROM student_members WHERE student_member_id = ?"
+	err := dao.DB.QueryRow(query, id).Scan(&sm.StudentMemberID, &sm.Name, &sm.StudentType, &sm.ImagePath)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -277,7 +278,7 @@ func (dao *ContentDAO) GetStudentMemberByID(id int) (*models.StudentMember, erro
 }
 
 func (dao *ContentDAO) GetAllStudentMembers() ([]models.StudentMember, error) {
-	query := "SELECT student_member_id, name, student_type FROM student_members"
+	query := "SELECT student_member_id, name, student_type, image_path FROM student_members"
 	rows, err := dao.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -287,7 +288,7 @@ func (dao *ContentDAO) GetAllStudentMembers() ([]models.StudentMember, error) {
 	var members []models.StudentMember
 	for rows.Next() {
 		var sm models.StudentMember
-		if err := rows.Scan(&sm.StudentMemberID, &sm.Name, &sm.StudentType); err != nil {
+		if err := rows.Scan(&sm.StudentMemberID, &sm.Name, &sm.StudentType, &sm.ImagePath); err != nil {
 			return nil, err
 		}
 		members = append(members, sm)
@@ -325,5 +326,12 @@ func (dao *ContentDAO) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 	// We assume there's only one row or we update the latest
 	query := "UPDATE office_info SET email = ?, phone = ?, phone_ext = ?, office_location = ?, facebook_url = ? WHERE id = ?"
 	_, err := dao.DB.Exec(query, oi.Email, oi.Phone, oi.PhoneExt, oi.OfficeLocation, oi.FacebookURL, oi.ID)
+	return err
+}
+
+func (dao *ContentDAO) UpdateStudentMemberImage(id int, path string) error {
+	// Note: adjust the table name or ID column name if yours are slightly different!
+	query := "UPDATE student_members SET image_path = ? WHERE student_member_id = ?"
+	_, err := dao.DB.Exec(query, path, id)
 	return err
 }

@@ -141,3 +141,7 @@ func (s *ContentService) GetOfficeInfo() (*models.OfficeInfo, error) {
 func (s *ContentService) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 	return s.DAO.UpdateOfficeInfo(oi)
 }
+
+func (s *ContentService) UpdateStudentMemberImage(id int, path string) error {
+	return s.DAO.UpdateStudentMemberImage(id, path)
+}

@@ -3,6 +3,7 @@ package station
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -301,7 +302,7 @@ func (h *StationHandler) DeleteStation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Request) {
-	imageType := r.PathValue("type")
+	// imageType := r.PathValue("type")
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 	s, err := h.Service.GetStation(id)
@@ -310,14 +311,26 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 	if err != nil || s == nil || s.ImagePath == nil || *s.ImagePath == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found in database"})
 		return
 	}
 
-	if imageType == "sensor" || imageType == "" {
-		http.ServeFile(w, r, *s.ImagePath) // Serve the dereferenced pointer
+	// if imageType == "sensor" || imageType == "" {
+	baseDir := os.Getenv("BASE_PATH")
+
+	fullPath := filepath.Join(baseDir, *s.ImagePath)
+
+	// Verify the file physically exists on the server
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image file missing from disk"})
 		return
 	}
+
+	http.ServeFile(w, r, fullPath)
+	return
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
