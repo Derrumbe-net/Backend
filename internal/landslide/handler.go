@@ -213,7 +213,6 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if l == nil || l.ImagePath == "" {
-		// If the landslide doesn't exist, or it has no image path, return empty
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode([]string{})
 		return
@@ -227,9 +226,6 @@ func (h *LandslideHandler) GetLandslideImages(w http.ResponseWriter, r *http.Req
 
 	dir := filepath.Join(baseDir, "landslides", l.ImagePath)
 
-	log.Printf("Searching for images in exact directory: '%s'\n", dir)
-
-	// 4. Read the directory
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -258,38 +254,49 @@ func (h *LandslideHandler) ServeLandslideImage(w http.ResponseWriter, r *http.Re
 	idStr := r.PathValue("id")
 	filename := r.PathValue("filename")
 
-	var path string
-	if idStr != "" && filename != "" {
-		path = filepath.Join("landslides", idStr, filename)
-	} else if filename != "" {
-		path = filepath.Join("landslides", filename)
-	} else {
-		// Get by ID (main image)
-		id, _ := strconv.Atoi(idStr)
-		l, err := h.Service.GetLandslide(id)
-		if err != nil || l == nil || l.ImagePath == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
-			return
-		}
-		path = l.ImagePath
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid ID format"})
+		return
 	}
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	l, err := h.Service.GetLandslide(id)
+	if err != nil || l == nil || l.ImagePath == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Landslide or image folder not found"})
+		return
+	}
+
+	baseDir := os.Getenv("BASE_PATH")
+
+	// Sanitize filename to prevent directory traversal attacks
+	safeFilename := filepath.Base(filename)
+
+	// Construct exact path: data/landslides/{ImagePath}/{filename}
+	fullPath := filepath.Join(baseDir, "landslides", l.ImagePath, safeFilename)
+
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
 		return
 	}
-	http.ServeFile(w, r, path)
+
+	http.ServeFile(w, r, fullPath)
 }
 
 func (h *LandslideHandler) UploadLandslideImage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
-	destDir := filepath.Join("uploads", "landslides", idStr)
+	baseDir := os.Getenv("BASE_PATH")
+
+	// Create folder specifically for this landslide's ID: data/landslides/{id}
+	destDir := filepath.Join(baseDir, "landslides", idStr)
+
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -298,7 +305,7 @@ func (h *LandslideHandler) UploadLandslideImage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if err := h.Service.UpdateLandslideImage(id, path); err != nil {
+	if err := h.Service.UpdateLandslideImage(id, idStr); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
