@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -138,4 +139,60 @@ func (s *AuthService) UpdateAuthorization(id int, isAuthorized bool) error {
 
 func (s *AuthService) DeleteAdmin(id int) error {
 	return s.DAO.DeleteAdmin(id)
+}
+
+// Password Reset
+
+func (s *AuthService) RequestPasswordReset(email string) error {
+	admin, err := s.DAO.GetAdminByEmail(email)
+	if err != nil {
+		return err
+	}
+	// Security: If admin not found, don't reveal it. Just return nil.
+	if admin == nil {
+		return nil
+	}
+
+	// Generate secure token
+	token := fmt.Sprintf("%x", time.Now().UnixNano()) + fmt.Sprintf("%x", time.Now().Unix()) // Simple concatenation for uniqueness
+	expiresAt := time.Now().Add(30 * time.Minute)
+
+	if err := s.DAO.SetPasswordResetToken(admin.AdminID, token, expiresAt); err != nil {
+		return err
+	}
+
+	// Send email
+	if s.EmailService != nil {
+		return s.EmailService.SendPasswordResetEmail(admin.Email, token)
+	}
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(token string, newPassword string) error {
+	admin, resetToken, err := s.DAO.GetAdminByResetToken(token)
+	if err != nil {
+		return err
+	}
+	if admin == nil || resetToken == nil {
+		return errors.New("invalid or expired token")
+	}
+
+	// Check expiration
+	if resetToken.ResetTokenExpiresAt.Before(time.Now()) {
+		return errors.New("token expired")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Update password and clear token
+	if err := s.DAO.UpdatePassword(admin.AdminID, string(hashedPassword)); err != nil {
+		return err
+	}
+
+	return s.DAO.ClearPasswordResetToken(admin.AdminID)
 }

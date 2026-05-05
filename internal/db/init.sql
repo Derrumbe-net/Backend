@@ -11,6 +11,8 @@ CREATE TABLE admin_tokens (
     token_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL,
     verification_token VARCHAR(64) NOT NULL,
+    reset_token VARCHAR(64) NULL,
+    reset_token_expires_at DATETIME NULL,
     token_expires_at DATETIME NOT NULL,
     CONSTRAINT admin_tokens_ibfk_1 FOREIGN KEY (admin_id) REFERENCES admins (admin_id) ON DELETE CASCADE
 );

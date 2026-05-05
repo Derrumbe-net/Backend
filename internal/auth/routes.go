@@ -13,6 +13,8 @@ func RegisterRoutes(mux *http.ServeMux, handler *AdminHandler) {
 	mux.HandleFunc("POST /admins/signup", handler.SignUpAdmin)
 	mux.HandleFunc("POST /admins/login", handler.LoginAdmin)
 	mux.HandleFunc("GET /admins/verify", handler.VerifyEmail)
+	mux.HandleFunc("POST /admins/password-reset/request", handler.RequestPasswordReset)
+	mux.HandleFunc("POST /admins/password-reset/confirm", handler.ConfirmPasswordReset)
 
 	// Admin Protected Routes (Require JWT)
 	mux.Handle("GET /admins", protected(handler.GetAllAdmins))
