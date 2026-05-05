@@ -9,6 +9,7 @@ import (
 
 	"github.com/Derrumbe-net/Backend/internal/models"
 	"github.com/Derrumbe-net/Backend/internal/utils"
+	"github.com/shopspring/decimal"
 )
 
 type StationHandler struct {
@@ -119,11 +120,11 @@ func toStationResponses(stations []models.Station) []StationResponse {
 
 type CreateReadingRequest struct {
 	RecordedAt    time.Time `json:"recorded_at"`
-	Precipitation *float64   `json:"precipitation"`
-	WC1           *float64   `json:"wc1"`
-	WC2           *float64   `json:"wc2"`
-	WC3           *float64   `json:"wc3"`
-	WC4           *float64   `json:"wc4"`
+	Precipitation float64   `json:"precipitation"`
+	WC1           float64   `json:"wc1"`
+	WC2           float64   `json:"wc2"`
+	WC3           float64   `json:"wc3"`
+	WC4           float64   `json:"wc4"`
 }
 
 // --- Handlers ---
@@ -423,11 +424,11 @@ func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {
 	reading := &models.StationReading{
 		StationID:     stationID,
 		RecordedAt:    req.RecordedAt,
-		Precipitation: req.Precipitation,
-		WC1:           req.WC1,
-		WC2:           req.WC2,
-		WC3:           req.WC3,
-		WC4:           req.WC4,
+		Precipitation: decimal.NewFromFloat(req.Precipitation),
+		WC1:           decimal.NewFromFloat(req.WC1),
+		WC2:           decimal.NewFromFloat(req.WC2),
+		WC3:           decimal.NewFromFloat(req.WC3),
+		WC4:           decimal.NewFromFloat(req.WC4),
 	}
 
 	// Assuming you add CreateReading to your StationService
