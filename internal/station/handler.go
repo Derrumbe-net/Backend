@@ -117,6 +117,15 @@ func toStationResponses(stations []models.Station) []StationResponse {
 	return responses
 }
 
+type CreateReadingRequest struct {
+	RecordedAt    time.Time `json:"recorded_at"`
+	Precipitation float64   `json:"precipitation"`
+	WC1           float64   `json:"wc1"`
+	WC2           float64   `json:"wc2"`
+	WC3           float64   `json:"wc3"`
+	WC4           float64   `json:"wc4"`
+}
+
 // --- Handlers ---
 
 func (h *StationHandler) GetAllStations(w http.ResponseWriter, r *http.Request) {
@@ -393,4 +402,41 @@ func (h *StationHandler) GetLatestStation(w http.ResponseWriter, r *http.Request
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reading)
+}
+
+func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	stationID, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var req CreateReadingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+
+	reading := &models.StationReading{
+		StationID:     stationID,
+		RecordedAt:    req.RecordedAt,
+		Precipitation: req.Precipitation,
+		WC1:           req.WC1,
+		WC2:           req.WC2,
+		WC3:           req.WC3,
+		WC4:           req.WC4,
+	}
+
+	// Assuming you add CreateReading to your StationService
+	if err := h.Service.DAO.CreateReading(reading); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

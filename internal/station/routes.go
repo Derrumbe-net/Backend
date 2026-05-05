@@ -23,4 +23,5 @@ func RegisterRoutes(mux *http.ServeMux, handler *StationHandler) {
 	mux.Handle("PUT /stations/{id}", protected(handler.UpdateStation))
 	mux.Handle("DELETE /stations/{id}", protected(handler.DeleteStation))
 	mux.Handle("POST /stations/{id}/image/sensor", protected(handler.UploadStationSensorImage))
+	mux.Handle("POST /stations/{id}/readings", protected(handler.CreateReading))
 }
