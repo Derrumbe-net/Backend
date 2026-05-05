@@ -361,7 +361,40 @@ func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http
 func (h *StationHandler) GetStationHistory(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
-	readings, err := h.Service.GetStationHistory(id)
+
+	var startDate, endDate *time.Time
+
+	if sdStr := r.URL.Query().Get("start_date"); sdStr != "" {
+		t, err := time.Parse(time.RFC3339, sdStr)
+		if err != nil {
+			// Try just date format if RFC3339 fails
+			t, err = time.Parse("2006-01-02", sdStr)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Invalid start_date format. Use RFC3339 (e.g., 2023-01-01T00:00:00Z) or YYYY-MM-DD"})
+				return
+			}
+		}
+		startDate = &t
+	}
+
+	if edStr := r.URL.Query().Get("end_date"); edStr != "" {
+		t, err := time.Parse(time.RFC3339, edStr)
+		if err != nil {
+			// Try just date format if RFC3339 fails
+			t, err = time.Parse("2006-01-02", edStr)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Invalid end_date format. Use RFC3339 (e.g., 2023-01-01T00:00:00Z) or YYYY-MM-DD"})
+				return
+			}
+		}
+		endDate = &t
+	}
+
+	readings, err := h.Service.GetStationHistory(id, startDate, endDate)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

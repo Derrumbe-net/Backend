@@ -2,6 +2,8 @@ package station
 
 import (
 	"database/sql"
+	"time"
+
 	"github.com/Derrumbe-net/Backend/internal/models"
 )
 
@@ -95,9 +97,22 @@ func (dao *StationDAO) GetLatestReading(stationID int) (*models.StationReading, 
 	return &r, nil
 }
 
-func (dao *StationDAO) GetReadingsHistory(stationID int) ([]models.StationReading, error) {
-	query := "SELECT reading_id, station_id, recorded_at, precipitation, wc1, wc2, wc3, wc4 FROM station_readings WHERE station_id = ? ORDER BY recorded_at ASC"
-	rows, err := dao.DB.Query(query, stationID)
+func (dao *StationDAO) GetReadingsHistory(stationID int, startDate, endDate *time.Time) ([]models.StationReading, error) {
+	query := "SELECT reading_id, station_id, recorded_at, precipitation, wc1, wc2, wc3, wc4 FROM station_readings WHERE station_id = ?"
+	args := []interface{}{stationID}
+
+	if startDate != nil {
+		query += " AND recorded_at >= ?"
+		args = append(args, startDate)
+	}
+	if endDate != nil {
+		query += " AND recorded_at <= ?"
+		args = append(args, endDate)
+	}
+
+	query += " ORDER BY recorded_at ASC"
+
+	rows, err := dao.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
