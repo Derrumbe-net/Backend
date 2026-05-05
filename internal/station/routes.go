@@ -2,6 +2,7 @@ package station
 
 import (
 	"net/http"
+
 	"github.com/Derrumbe-net/Backend/internal/auth"
 )
 
@@ -12,6 +13,7 @@ func RegisterRoutes(mux *http.ServeMux, handler *StationHandler) {
 
 	// Station Public Routes
 	mux.HandleFunc("GET /stations", handler.GetAllStations)
+	mux.HandleFunc("GET /stations/kml", handler.ExportStationsKML)
 	mux.HandleFunc("GET /stations/{id}", handler.GetStation)
 	mux.HandleFunc("GET /stations/{id}/image/{type}", handler.ServeStationImage)
 	mux.HandleFunc("GET /stations/historical/{id}", handler.GetStationHistory)
