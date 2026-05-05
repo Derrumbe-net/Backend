@@ -168,6 +168,16 @@ type UpdateOfficeInfoRequest struct {
 	FacebookURL    string `json:"facebook_url"`
 }
 
+type CreateMunicipalityRequest struct {
+	Name  string `json:"name"`
+	Stage string `json:"stage"`
+}
+
+type UpdateMunicipalityRequest struct {
+	Name  *string `json:"name"`
+	Stage *string `json:"stage"`
+}
+
 // --- Handlers ---
 
 // Projects
@@ -1008,4 +1018,119 @@ func (h *ContentHandler) UpdateOfficeInfo(w http.ResponseWriter, r *http.Request
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(oi)
+}
+
+// LandslideReady Municipalities
+func (h *ContentHandler) GetAllMunicipalities(w http.ResponseWriter, r *http.Request) {
+	municipalities, err := h.Service.GetAllMunicipalities()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(municipalities)
+}
+
+func (h *ContentHandler) GetMunicipality(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, _ := strconv.Atoi(idStr)
+	m, err := h.Service.GetMunicipality(id)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if m == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Municipality not found"})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(m)
+}
+
+func (h *ContentHandler) CreateMunicipality(w http.ResponseWriter, r *http.Request) {
+	var req CreateMunicipalityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+
+	m := &models.Municipality{
+		Name:  req.Name,
+		Stage: req.Stage,
+	}
+
+	id, err := h.Service.CreateMunicipality(m)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	m.ID = int(id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(m)
+}
+
+func (h *ContentHandler) UpdateMunicipality(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, _ := strconv.Atoi(idStr)
+
+	m, err := h.Service.GetMunicipality(id)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	if m == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Municipality not found"})
+		return
+	}
+
+	var req UpdateMunicipalityRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+
+	if req.Name != nil {
+		m.Name = *req.Name
+	}
+	if req.Stage != nil {
+		m.Stage = *req.Stage
+	}
+
+	if err := h.Service.UpdateMunicipality(m); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(m)
+}
+
+func (h *ContentHandler) DeleteMunicipality(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, _ := strconv.Atoi(idStr)
+	if err := h.Service.DeleteMunicipality(id); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

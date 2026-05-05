@@ -143,3 +143,59 @@ func (dao *AdminDAO) DeleteAdmin(id int) error {
 	_, err := dao.DB.Exec("DELETE FROM admins WHERE admin_id = ?", id)
 	return err
 }
+
+// Password Reset Methods
+
+func (dao *AdminDAO) SetPasswordResetToken(adminID int, token string, expiresAt time.Time) error {
+	// First check if token record exists
+	var count int
+	err := dao.DB.QueryRow("SELECT COUNT(*) FROM admin_tokens WHERE admin_id = ?", adminID).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		_, err = dao.DB.Exec("UPDATE admin_tokens SET reset_token = ?, reset_token_expires_at = ? WHERE admin_id = ?",
+			token, expiresAt, adminID)
+	} else {
+		// This case is rare as every admin gets a verification token on signup, but good for robustness
+		_, err = dao.DB.Exec("INSERT INTO admin_tokens (admin_id, verification_token, token_expires_at, reset_token, reset_token_expires_at) VALUES (?, '', NOW(), ?, ?)",
+			adminID, token, expiresAt)
+	}
+	return err
+}
+
+func (dao *AdminDAO) GetAdminByResetToken(token string) (*models.Admin, *models.AdminToken, error) {
+	var a models.Admin
+	var t models.AdminToken
+	query := `
+		SELECT a.admin_id, a.email, a.password, a.is_authorized, a.is_email_verified,
+		       t.token_id, t.admin_id, t.verification_token, t.reset_token, t.reset_token_expires_at, t.token_expires_at
+		FROM admins a
+		JOIN admin_tokens t ON a.admin_id = t.admin_id
+		WHERE t.reset_token = ?`
+	
+	err := dao.DB.QueryRow(query, token).Scan(
+		&a.AdminID, &a.Email, &a.Password, &a.IsAuthorized, &a.IsEmailVerified,
+		&t.TokenID, &t.AdminID, &t.VerificationToken, &t.ResetToken, &t.ResetTokenExpiresAt, &t.TokenExpiresAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &a, &t, nil
+}
+
+func (dao *AdminDAO) UpdatePassword(adminID int, hashedPassword string) error {
+	_, err := dao.DB.Exec("UPDATE admins SET password = ? WHERE admin_id = ?", hashedPassword, adminID)
+	return err
+}
+
+func (dao *AdminDAO) ClearPasswordResetToken(adminID int) error {
+	_, err := dao.DB.Exec("UPDATE admin_tokens SET reset_token = NULL, reset_token_expires_at = NULL WHERE admin_id = ?", adminID)
+	return err
+}

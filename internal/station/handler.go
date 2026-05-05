@@ -12,6 +12,7 @@ import (
 
 	"github.com/Derrumbe-net/Backend/internal/models"
 	"github.com/Derrumbe-net/Backend/internal/utils"
+	"github.com/shopspring/decimal"
 )
 
 type StationHandler struct {
@@ -118,6 +119,15 @@ func toStationResponses(stations []models.Station) []StationResponse {
 		responses = append(responses, toStationResponse(&s))
 	}
 	return responses
+}
+
+type CreateReadingRequest struct {
+	RecordedAt    time.Time `json:"recorded_at"`
+	Precipitation float64   `json:"precipitation"`
+	WC1           float64   `json:"wc1"`
+	WC2           float64   `json:"wc2"`
+	WC3           float64   `json:"wc3"`
+	WC4           float64   `json:"wc4"`
 }
 
 // --- Handlers ---
@@ -366,7 +376,40 @@ func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http
 func (h *StationHandler) GetStationHistory(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
-	readings, err := h.Service.GetStationHistory(id)
+
+	var startDate, endDate *time.Time
+
+	if sdStr := r.URL.Query().Get("start_date"); sdStr != "" {
+		t, err := time.Parse(time.RFC3339, sdStr)
+		if err != nil {
+			// Try just date format if RFC3339 fails
+			t, err = time.Parse("2006-01-02", sdStr)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Invalid start_date format. Use RFC3339 (e.g., 2023-01-01T00:00:00Z) or YYYY-MM-DD"})
+				return
+			}
+		}
+		startDate = &t
+	}
+
+	if edStr := r.URL.Query().Get("end_date"); edStr != "" {
+		t, err := time.Parse(time.RFC3339, edStr)
+		if err != nil {
+			// Try just date format if RFC3339 fails
+			t, err = time.Parse("2006-01-02", edStr)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Invalid end_date format. Use RFC3339 (e.g., 2023-01-01T00:00:00Z) or YYYY-MM-DD"})
+				return
+			}
+		}
+		endDate = &t
+	}
+
+	readings, err := h.Service.GetStationHistory(id, startDate, endDate)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -582,4 +625,41 @@ func (h *StationHandler) ServeStationImageByType(w http.ResponseWriter, r *http.
 	}
 
 	http.ServeFile(w, r, fullPath)
+}
+
+func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	stationID, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var req CreateReadingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		return
+	}
+
+	reading := &models.StationReading{
+		StationID:     stationID,
+		RecordedAt:    req.RecordedAt,
+		Precipitation: decimal.NewFromFloat(req.Precipitation),
+		WC1:           decimal.NewFromFloat(req.WC1),
+		WC2:           decimal.NewFromFloat(req.WC2),
+		WC3:           decimal.NewFromFloat(req.WC3),
+		WC4:           decimal.NewFromFloat(req.WC4),
+	}
+
+	// Assuming you add CreateReading to your StationService
+	if err := h.Service.DAO.CreateReading(reading); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
 }

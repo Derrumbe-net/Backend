@@ -308,6 +308,13 @@ func (dao *ContentDAO) DeleteStudentMember(id int) error {
 	return err
 }
 
+func (dao *ContentDAO) UpdateStudentMemberImage(id int, path string) error {
+	// Note: adjust the table name or ID column name if yours are slightly different!
+	query := "UPDATE student_members SET image_path = ? WHERE student_member_id = ?"
+	_, err := dao.DB.Exec(query, path, id)
+	return err
+}
+
 // Office Info
 func (dao *ContentDAO) GetOfficeInfo() (*models.OfficeInfo, error) {
 	var oi models.OfficeInfo
@@ -329,9 +336,56 @@ func (dao *ContentDAO) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 	return err
 }
 
-func (dao *ContentDAO) UpdateStudentMemberImage(id int, path string) error {
-	// Note: adjust the table name or ID column name if yours are slightly different!
-	query := "UPDATE student_members SET image_path = ? WHERE student_member_id = ?"
-	_, err := dao.DB.Exec(query, path, id)
+// LandslideReady Municipalities
+func (dao *ContentDAO) CreateMunicipality(m *models.Municipality) (int64, error) {
+	query := "INSERT INTO landslideready_municipalities (name, stage) VALUES (?, ?)"
+	res, err := dao.DB.Exec(query, m.Name, m.Stage)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (dao *ContentDAO) GetMunicipalityByID(id int) (*models.Municipality, error) {
+	var m models.Municipality
+	query := "SELECT id, name, stage FROM landslideready_municipalities WHERE id = ?"
+	err := dao.DB.QueryRow(query, id).Scan(&m.ID, &m.Name, &m.Stage)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (dao *ContentDAO) GetAllMunicipalities() ([]models.Municipality, error) {
+	query := "SELECT id, name, stage FROM landslideready_municipalities"
+	rows, err := dao.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var municipalities []models.Municipality
+	for rows.Next() {
+		var m models.Municipality
+		if err := rows.Scan(&m.ID, &m.Name, &m.Stage); err != nil {
+			return nil, err
+		}
+		municipalities = append(municipalities, m)
+	}
+	return municipalities, nil
+}
+
+func (dao *ContentDAO) UpdateMunicipality(m *models.Municipality) error {
+	query := "UPDATE landslideready_municipalities SET name = ?, stage = ? WHERE id = ?"
+	_, err := dao.DB.Exec(query, m.Name, m.Stage, m.ID)
+	return err
+}
+
+func (dao *ContentDAO) DeleteMunicipality(id int) error {
+	query := "DELETE FROM landslideready_municipalities WHERE id = ?"
+	_, err := dao.DB.Exec(query, id)
 	return err
 }

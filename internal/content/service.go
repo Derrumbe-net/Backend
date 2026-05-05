@@ -133,6 +133,10 @@ func (s *ContentService) DeleteStudentMember(id int) error {
 	return s.DAO.DeleteStudentMember(id)
 }
 
+func (s *ContentService) UpdateStudentMemberImage(id int, path string) error {
+	return s.DAO.UpdateStudentMemberImage(id, path)
+}
+
 // Office Info
 func (s *ContentService) GetOfficeInfo() (*models.OfficeInfo, error) {
 	return s.DAO.GetOfficeInfo()
@@ -142,6 +146,23 @@ func (s *ContentService) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 	return s.DAO.UpdateOfficeInfo(oi)
 }
 
-func (s *ContentService) UpdateStudentMemberImage(id int, path string) error {
-	return s.DAO.UpdateStudentMemberImage(id, path)
+// LandslideReady Municipalities
+func (s *ContentService) GetAllMunicipalities() ([]models.Municipality, error) {
+	return s.DAO.GetAllMunicipalities()
+}
+
+func (s *ContentService) GetMunicipality(id int) (*models.Municipality, error) {
+	return s.DAO.GetMunicipalityByID(id)
+}
+
+func (s *ContentService) CreateMunicipality(m *models.Municipality) (int64, error) {
+	return s.DAO.CreateMunicipality(m)
+}
+
+func (s *ContentService) UpdateMunicipality(m *models.Municipality) error {
+	return s.DAO.UpdateMunicipality(m)
+}
+
+func (s *ContentService) DeleteMunicipality(id int) error {
+	return s.DAO.DeleteMunicipality(id)
 }

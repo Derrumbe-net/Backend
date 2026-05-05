@@ -66,4 +66,11 @@ func RegisterRoutes(mux *http.ServeMux, handler *ContentHandler) {
 	// Office Info
 	mux.HandleFunc("GET /office-info", handler.GetOfficeInfo)
 	mux.Handle("PUT /office-info", protected(handler.UpdateOfficeInfo))
+
+	// LandslideReady Municipalities
+	mux.HandleFunc("GET /municipalities", handler.GetAllMunicipalities)
+	mux.HandleFunc("GET /municipalities/{id}", handler.GetMunicipality)
+	mux.Handle("POST /municipalities", protected(handler.CreateMunicipality))
+	mux.Handle("PUT /municipalities/{id}", protected(handler.UpdateMunicipality))
+	mux.Handle("DELETE /municipalities/{id}", protected(handler.DeleteMunicipality))
 }

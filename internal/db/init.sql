@@ -1,16 +1,18 @@
 CREATE TABLE admins (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    name VARCHAR(100) NULL,
     is_authorized TINYINT(1) DEFAULT 0 NULL,
-    is_email_verified TINYINT(1) DEFAULT 0 NULL
+    is_email_verified TINYINT(1) DEFAULT 0 NULL,
+    CONSTRAINT email UNIQUE (email)
 );
 
 CREATE TABLE admin_tokens (
     token_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL,
     verification_token VARCHAR(64) NOT NULL,
+    reset_token VARCHAR(64) NULL,
+    reset_token_expires_at DATETIME NULL,
     token_expires_at DATETIME NOT NULL,
     CONSTRAINT admin_tokens_ibfk_1 FOREIGN KEY (admin_id) REFERENCES admins (admin_id) ON DELETE CASCADE
 );
@@ -35,6 +37,12 @@ CREATE TABLE funding_sources (
     image_path VARCHAR(512) NULL,
     display_order INT DEFAULT 0 NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP NULL
+);
+
+CREATE TABLE landslideready_municipalities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    stage ENUM('Completado', 'Etapa Final', 'En progreso adelantado', 'En progreso') NOT NULL
 );
 
 CREATE TABLE landslides (
@@ -108,7 +116,11 @@ CREATE TABLE stations (
     slope DECIMAL(10, 2) NULL,
     is_available TINYINT(1) DEFAULT 1 NULL,
     collaborator VARCHAR(100) NULL,
-    station_installation_date DATETIME NULL
+    station_installation_date DATETIME NULL,
+    wc1_max FLOAT NULL,
+    wc2_max FLOAT NULL,
+    wc3_max FLOAT NULL,
+    wc4_max FLOAT NULL
 );
 
 CREATE TABLE station_readings (
@@ -129,5 +141,6 @@ CREATE INDEX station_id ON station_readings (station_id);
 CREATE TABLE student_members (
     student_member_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(20) NOT NULL,
-    student_type ENUM('graduate', 'undergraduate') NOT NULL
+    student_type ENUM('graduate', 'undergraduate') NOT NULL,
+    image_path VARCHAR(255) NULL
 );

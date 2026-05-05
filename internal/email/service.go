@@ -112,6 +112,21 @@ func (s *EmailService) SendAdminWelcome(to string) error {
 	return s.send(to, "Your Admin Access Has Been Approved", "admin_welcome", data)
 }
 
+func (s *EmailService) SendPasswordResetEmail(to string, token string) error {
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
+	data := struct {
+		ResetLink string
+	}{
+		ResetLink: fmt.Sprintf("%s/password-reset?token=%s", frontendURL, token),
+	}
+
+	return s.send(to, "Reset Your DerrumbeNet Password", "password_reset", data)
+}
+
 // SendReportAlert triggers the 'report_submitted' template for the Super Admin
 func (s *EmailService) SendReportAlert(r *models.Report) error {
 	superAdminEmail := os.Getenv("SUPERADMIN_EMAIL")

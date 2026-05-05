@@ -1,6 +1,8 @@
 package station
 
 import (
+	"time"
+
 	"github.com/Derrumbe-net/Backend/internal/models"
 )
 
@@ -66,6 +68,6 @@ func (s *StationService) GetLatestStation(id int) (*models.StationReading, error
 	return s.DAO.GetLatestReading(id)
 }
 
-func (s *StationService) GetStationHistory(id int) ([]models.StationReading, error) {
-	return s.DAO.GetReadingsHistory(id)
+func (s *StationService) GetStationHistory(id int, startDate, endDate *time.Time) ([]models.StationReading, error) {
+	return s.DAO.GetReadingsHistory(id, startDate, endDate)
 }
