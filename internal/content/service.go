@@ -141,3 +141,24 @@ func (s *ContentService) GetOfficeInfo() (*models.OfficeInfo, error) {
 func (s *ContentService) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 	return s.DAO.UpdateOfficeInfo(oi)
 }
+
+// LandslideReady Municipalities
+func (s *ContentService) GetAllMunicipalities() ([]models.Municipality, error) {
+	return s.DAO.GetAllMunicipalities()
+}
+
+func (s *ContentService) GetMunicipality(id int) (*models.Municipality, error) {
+	return s.DAO.GetMunicipalityByID(id)
+}
+
+func (s *ContentService) CreateMunicipality(m *models.Municipality) (int64, error) {
+	return s.DAO.CreateMunicipality(m)
+}
+
+func (s *ContentService) UpdateMunicipality(m *models.Municipality) error {
+	return s.DAO.UpdateMunicipality(m)
+}
+
+func (s *ContentService) DeleteMunicipality(id int) error {
+	return s.DAO.DeleteMunicipality(id)
+}
