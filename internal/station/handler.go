@@ -119,11 +119,11 @@ func toStationResponses(stations []models.Station) []StationResponse {
 
 type CreateReadingRequest struct {
 	RecordedAt    time.Time `json:"recorded_at"`
-	Precipitation float64   `json:"precipitation"`
-	WC1           float64   `json:"wc1"`
-	WC2           float64   `json:"wc2"`
-	WC3           float64   `json:"wc3"`
-	WC4           float64   `json:"wc4"`
+	Precipitation *float64   `json:"precipitation"`
+	WC1           *float64   `json:"wc1"`
+	WC2           *float64   `json:"wc2"`
+	WC3           *float64   `json:"wc3"`
+	WC4           *float64   `json:"wc4"`
 }
 
 // --- Handlers ---
