@@ -2,6 +2,7 @@ package station
 
 import (
 	"database/sql"
+
 	"github.com/Derrumbe-net/Backend/internal/models"
 )
 
@@ -84,8 +85,8 @@ func (dao *StationDAO) CreateReading(r *models.StationReading) error {
 
 func (dao *StationDAO) GetLatestReading(stationID int) (*models.StationReading, error) {
 	var r models.StationReading
-	query := "SELECT reading_id, station_id, recorded_at, precipitation, wc1, wc2, wc3, wc4 FROM station_readings WHERE station_id = ? ORDER BY recorded_at DESC LIMIT 1"
-	err := dao.DB.QueryRow(query, stationID).Scan(&r.ReadingID, &r.StationID, &r.RecordedAt, &r.Precipitation, &r.WC1, &r.WC2, &r.WC3, &r.WC4)
+	query := "SELECT reading_id, station_id, recorded_at, image_path, precipitation, wc1, wc2, wc3, wc4 FROM station_readings WHERE station_id = ? ORDER BY recorded_at DESC LIMIT 1"
+	err := dao.DB.QueryRow(query, stationID).Scan(&r.ReadingID, &r.StationID, &r.RecordedAt, &r.ImagePath, &r.Precipitation, &r.WC1, &r.WC2, &r.WC3, &r.WC4)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
