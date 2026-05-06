@@ -354,7 +354,9 @@ func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := h.Service.UpdateProjectImage(id, path); err != nil {
+	fileName := filepath.Base(path)
+
+	if err := h.Service.UpdateProjectImage(id, fileName); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -362,7 +364,7 @@ func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": fileName})
 }
 
 // Publications
@@ -484,9 +486,6 @@ func (h *ContentHandler) ServePublicationImage(w http.ResponseWriter, r *http.Re
 	}
 
 	baseDir := os.Getenv("BASE_PATH")
-	if baseDir == "" {
-		baseDir = "data"
-	}
 
 	fullPath := filepath.Join(baseDir, "publications", p.ImagePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -517,7 +516,9 @@ func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if err := h.Service.UpdatePublicationImage(id, path); err != nil {
+	fileName := filepath.Base(path)
+
+	if err := h.Service.UpdatePublicationImage(id, fileName); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -525,7 +526,7 @@ func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": fileName})
 }
 
 // Funding Sources
@@ -545,7 +546,6 @@ func (h *ContentHandler) GetFundingSource(w http.ResponseWriter, r *http.Request
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
-	// FIX: Catch the error here
 	fs, err := h.Service.GetFundingSource(id)
 	if err != nil || fs == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -670,14 +670,17 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-	if err := h.Service.UpdateFundingSourceImage(id, path); err != nil {
+
+	fileName := filepath.Base(path)
+
+	if err := h.Service.UpdateFundingSourceImage(id, fileName); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": fileName})
 }
 
 // Faculty Members
@@ -793,14 +796,17 @@ func (h *ContentHandler) UploadFacultyMemberImage(w http.ResponseWriter, r *http
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-	if err := h.Service.UpdateFacultyMemberImage(id, path); err != nil {
+
+	fileName := filepath.Base(path)
+
+	if err := h.Service.UpdateFacultyMemberImage(id, fileName); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": fileName})
 }
 
 func (h *ContentHandler) ServeFacultyMemberImage(w http.ResponseWriter, r *http.Request) {
@@ -958,14 +964,17 @@ func (h *ContentHandler) UploadStudentMemberImage(w http.ResponseWriter, r *http
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-	if err := h.Service.UpdateStudentMemberImage(id, path); err != nil {
+
+	fileName := filepath.Base(path)
+
+	if err := h.Service.UpdateStudentMemberImage(id, fileName); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": fileName})
 }
 
 // Office Info
