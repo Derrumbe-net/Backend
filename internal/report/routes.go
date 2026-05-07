@@ -2,6 +2,7 @@ package report
 
 import (
 	"net/http"
+
 	"github.com/Derrumbe-net/Backend/internal/auth"
 )
 
@@ -16,7 +17,7 @@ func RegisterRoutes(mux *http.ServeMux, handler *ReportHandler) {
 	mux.HandleFunc("POST /reports", handler.CreateReport)
 	mux.HandleFunc("POST /reports/{id}/upload", handler.UploadReportImage)
 	mux.HandleFunc("GET /reports/{id}/images", handler.GetReportImages)
-	mux.HandleFunc("GET /reports/{id}/images/{filename}", handler.ServeReportImage)
+	mux.HandleFunc("GET /reports/{id}/images/{filename...}", handler.ServeReportImage)
 
 	// Report Protected Routes
 	mux.Handle("PUT /reports/{id}", protected(handler.UpdateReport))

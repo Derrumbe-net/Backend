@@ -2,9 +2,12 @@ package station
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Derrumbe-net/Backend/internal/models"
@@ -311,7 +314,7 @@ func (h *StationHandler) DeleteStation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Request) {
-	imageType := r.PathValue("type")
+	// imageType := r.PathValue("type")
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 	s, err := h.Service.GetStation(id)
@@ -320,14 +323,26 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 	if err != nil || s == nil || s.ImagePath == nil || *s.ImagePath == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found in database"})
 		return
 	}
 
-	if imageType == "sensor" || imageType == "" {
-		http.ServeFile(w, r, *s.ImagePath) // Serve the dereferenced pointer
+	// if imageType == "sensor" || imageType == "" {
+	baseDir := os.Getenv("BASE_PATH")
+
+	fullPath := filepath.Join(baseDir, *s.ImagePath)
+
+	// Verify the file physically exists on the server
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image file missing from disk"})
 		return
 	}
+
+	http.ServeFile(w, r, fullPath)
+	return
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
@@ -436,6 +451,180 @@ func (h *StationHandler) GetLatestStation(w http.ResponseWriter, r *http.Request
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reading)
+}
+
+func (h *StationHandler) GetStationImages(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	fmt.Printf("[GetStationImages] Handler called with id=%s path=%s\n", idStr, r.URL.Path)
+
+	// Check if a specific image type is being requested
+	// e.g. /stations/item/2/images/sensor or /stations/item/2/images/plot
+	imageType := ""
+	if strings.HasSuffix(r.URL.Path, "/sensor") {
+		imageType = "sensor"
+	} else if strings.HasSuffix(r.URL.Path, "/plot") {
+		imageType = "plot"
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid ID format"})
+		return
+	}
+
+	s, err := h.Service.GetStation(id)
+	if err != nil || s == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Station not found"})
+		return
+	}
+
+	baseDir := os.Getenv("BASE_PATH")
+
+	// If a specific type is requested, serve the file directly
+	if imageType == "sensor" {
+		if s.ImagePath == nil || *s.ImagePath == "" {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "No sensor image"})
+			return
+		}
+		fullPath := filepath.Join(baseDir, *s.ImagePath)
+		fmt.Printf("[GetStationImages] Serving sensor image at path=%q\n", fullPath)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Sensor image file not found"})
+			return
+		}
+		http.ServeFile(w, r, fullPath)
+		return
+	}
+
+	if imageType == "plot" {
+		latest, err := h.Service.GetLatestStation(id)
+		if err != nil || latest == nil || latest.ImagePath == "" {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "No plot image"})
+			return
+		}
+		fullPath := filepath.Join(baseDir, "stations", latest.ImagePath)
+		fmt.Printf("[GetStationImages] Serving plot image at path=%q\n", fullPath)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Plot image file not found"})
+			return
+		}
+		http.ServeFile(w, r, fullPath)
+		return
+	}
+
+	// No type specified — return metadata JSON
+	type StationImages struct {
+		SensorImageURL string `json:"sensor_image_url"`
+		PlotImageURL   string `json:"plot_image_url"`
+	}
+	result := StationImages{}
+
+	if s.ImagePath != nil && *s.ImagePath != "" {
+		fullSensorPath := filepath.Join(baseDir, *s.ImagePath)
+		fmt.Printf("[GetStationImages] Checking sensor image at path=%q\n", fullSensorPath)
+		if _, err := os.Stat(fullSensorPath); err != nil {
+			fmt.Printf("[GetStationImages] Sensor image not found: %v\n", err)
+		} else {
+			result.SensorImageURL = fmt.Sprintf("/stations/item/%d/images/sensor", id)
+		}
+	}
+
+	latest, err := h.Service.GetLatestStation(id)
+	if err != nil {
+		fmt.Printf("[GetStationImages] Error fetching latest reading: %v\n", err)
+	} else if latest == nil {
+		fmt.Printf("[GetStationImages] No latest reading for station_id=%d\n", id)
+	} else if latest.ImagePath == "" {
+		fmt.Printf("[GetStationImages] Latest reading has empty ImagePath for station_id=%d\n", id)
+	} else {
+		fullPlotPath := filepath.Join(baseDir, "stations", latest.ImagePath)
+		fmt.Printf("[GetStationImages] Checking plot image at path=%q\n", fullPlotPath)
+		if _, statErr := os.Stat(fullPlotPath); statErr != nil {
+			fmt.Printf("[GetStationImages] Plot image not found: %v\n", statErr)
+		} else {
+			result.PlotImageURL = fmt.Sprintf("/stations/item/%d/images/plot", id)
+		}
+	}
+
+	fmt.Printf("[GetStationImages] Returning metadata: %+v\n", result)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func (h *StationHandler) ServeStationImageByType(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	imageType := r.PathValue("type")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid ID format"})
+		return
+	}
+
+	s, err := h.Service.GetStation(id)
+	if err != nil || s == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Station not found"})
+		return
+	}
+
+	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
+
+	var fullPath string
+
+	switch imageType {
+	case "sensor":
+		// Station.ImagePath = "stations/mayaguez.jpg"
+		if s.ImagePath == nil || *s.ImagePath == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "No sensor image"})
+			return
+		}
+		fullPath = filepath.Join(baseDir, *s.ImagePath)
+
+	case "plot":
+		latest, err := h.Service.GetLatestStation(id)
+		if err != nil || latest == nil || latest.ImagePath == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{"error": "No plot image"})
+			return
+		}
+		fullPath = filepath.Join(baseDir, "stations", latest.ImagePath)
+
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image type must be 'sensor' or 'plot'"})
+		return
+	}
+
+	// Prevent directory traversal
+	fullPath = filepath.Join(filepath.Dir(fullPath), filepath.Base(fullPath))
+
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Image file not found"})
+		return
+	}
+
+	http.ServeFile(w, r, fullPath)
 }
 
 func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {

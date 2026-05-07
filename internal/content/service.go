@@ -133,6 +133,10 @@ func (s *ContentService) DeleteStudentMember(id int) error {
 	return s.DAO.DeleteStudentMember(id)
 }
 
+func (s *ContentService) UpdateStudentMemberImage(id int, path string) error {
+	return s.DAO.UpdateStudentMemberImage(id, path)
+}
+
 // Office Info
 func (s *ContentService) GetOfficeInfo() (*models.OfficeInfo, error) {
 	return s.DAO.GetOfficeInfo()
