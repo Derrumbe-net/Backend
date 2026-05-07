@@ -324,6 +324,9 @@ func (h *ContentHandler) ServeProjectImage(w http.ResponseWriter, r *http.Reques
 	}
 
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	fullPath := filepath.Join(baseDir, "projects", p.ImagePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -345,6 +348,13 @@ func (h *ContentHandler) UploadProjectImage(w http.ResponseWriter, r *http.Reque
 		baseDir = "data"
 	}
 	destDir := filepath.Join(baseDir, "projects")
+
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
 
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
@@ -486,6 +496,9 @@ func (h *ContentHandler) ServePublicationImage(w http.ResponseWriter, r *http.Re
 	}
 
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	fullPath := filepath.Join(baseDir, "publications", p.ImagePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -507,6 +520,13 @@ func (h *ContentHandler) UploadPublicationImage(w http.ResponseWriter, r *http.R
 		baseDir = "data"
 	}
 	destDir := filepath.Join(baseDir, "publications")
+
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
 
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
@@ -663,6 +683,13 @@ func (h *ContentHandler) UploadFundingSourceImage(w http.ResponseWriter, r *http
 	}
 	destDir := filepath.Join(baseDir, "funding")
 
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
+
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -787,7 +814,17 @@ func (h *ContentHandler) UploadFacultyMemberImage(w http.ResponseWriter, r *http
 	id, _ := strconv.Atoi(idStr)
 
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 	destDir := filepath.Join(baseDir, "faculty_images")
+
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
 
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
@@ -822,6 +859,9 @@ func (h *ContentHandler) ServeFacultyMemberImage(w http.ResponseWriter, r *http.
 	}
 
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	fullPath := filepath.Join(baseDir, "faculty_images", fm.ImagePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -938,6 +978,9 @@ func (h *ContentHandler) ServeStudentMemberImage(w http.ResponseWriter, r *http.
 	}
 
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	fullPath := filepath.Join(baseDir, "student_images", sm.ImagePath)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -953,9 +996,20 @@ func (h *ContentHandler) ServeStudentMemberImage(w http.ResponseWriter, r *http.
 func (h *ContentHandler) UploadStudentMemberImage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
+
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	destDir := filepath.Join(baseDir, "student_images")
+
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
 
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
