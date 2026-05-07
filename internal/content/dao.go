@@ -338,8 +338,8 @@ func (dao *ContentDAO) UpdateOfficeInfo(oi *models.OfficeInfo) error {
 
 // LandslideReady Municipalities
 func (dao *ContentDAO) CreateMunicipality(m *models.Municipality) (int64, error) {
-	query := "INSERT INTO landslideready_municipalities (name, stage) VALUES (?, ?)"
-	res, err := dao.DB.Exec(query, m.Name, m.Stage)
+	query := "INSERT INTO landslideready_municipalities (name, stage, start_year, renovation_year) VALUES (?, ?, ?, ?)"
+	res, err := dao.DB.Exec(query, m.Name, m.Stage, m.StartYear, m.RenovationYear)
 	if err != nil {
 		return 0, err
 	}
@@ -348,8 +348,8 @@ func (dao *ContentDAO) CreateMunicipality(m *models.Municipality) (int64, error)
 
 func (dao *ContentDAO) GetMunicipalityByID(id int) (*models.Municipality, error) {
 	var m models.Municipality
-	query := "SELECT id, name, stage FROM landslideready_municipalities WHERE id = ?"
-	err := dao.DB.QueryRow(query, id).Scan(&m.ID, &m.Name, &m.Stage)
+	query := "SELECT id, name, stage, start_year, renovation_year FROM landslideready_municipalities WHERE id = ?"
+	err := dao.DB.QueryRow(query, id).Scan(&m.ID, &m.Name, &m.Stage, &m.StartYear, &m.RenovationYear)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -360,7 +360,7 @@ func (dao *ContentDAO) GetMunicipalityByID(id int) (*models.Municipality, error)
 }
 
 func (dao *ContentDAO) GetAllMunicipalities() ([]models.Municipality, error) {
-	query := "SELECT id, name, stage FROM landslideready_municipalities"
+	query := "SELECT id, name, stage, start_year, renovation_year FROM landslideready_municipalities"
 	rows, err := dao.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func (dao *ContentDAO) GetAllMunicipalities() ([]models.Municipality, error) {
 	var municipalities []models.Municipality
 	for rows.Next() {
 		var m models.Municipality
-		if err := rows.Scan(&m.ID, &m.Name, &m.Stage); err != nil {
+		if err := rows.Scan(&m.ID, &m.Name, &m.Stage, &m.StartYear, &m.RenovationYear); err != nil {
 			return nil, err
 		}
 		municipalities = append(municipalities, m)
@@ -379,8 +379,9 @@ func (dao *ContentDAO) GetAllMunicipalities() ([]models.Municipality, error) {
 }
 
 func (dao *ContentDAO) UpdateMunicipality(m *models.Municipality) error {
-	query := "UPDATE landslideready_municipalities SET name = ?, stage = ? WHERE id = ?"
-	_, err := dao.DB.Exec(query, m.Name, m.Stage, m.ID)
+	query := "UPDATE landslideready_municipalities SET name = ?, stage = ?, start_year = ?, renovation_year = ? WHERE id = ?"
+	// Make sure m.ID stays at the very end to match the WHERE clause!
+	_, err := dao.DB.Exec(query, m.Name, m.Stage, m.StartYear, m.RenovationYear, m.ID)
 	return err
 }
 

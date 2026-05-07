@@ -169,13 +169,17 @@ type UpdateOfficeInfoRequest struct {
 }
 
 type CreateMunicipalityRequest struct {
-	Name  string `json:"name"`
-	Stage string `json:"stage"`
+	Name           string `json:"name"`
+	Stage          string `json:"stage"`
+	StartYear      *int   `json:"start_year"`
+	RenovationYear *int   `json:"renovation_year"`
 }
 
 type UpdateMunicipalityRequest struct {
-	Name  *string `json:"name"`
-	Stage *string `json:"stage"`
+	Name           *string `json:"name"`
+	Stage          *string `json:"stage"`
+	StartYear      *int    `json:"start_year"`
+	RenovationYear *int    `json:"renovation_year"`
 }
 
 // --- Handlers ---
@@ -1126,8 +1130,10 @@ func (h *ContentHandler) CreateMunicipality(w http.ResponseWriter, r *http.Reque
 	}
 
 	m := &models.Municipality{
-		Name:  req.Name,
-		Stage: req.Stage,
+		Name:           req.Name,
+		Stage:          req.Stage,
+		StartYear:      req.StartYear,      // Added
+		RenovationYear: req.RenovationYear, // Added
 	}
 
 	id, err := h.Service.CreateMunicipality(m)
@@ -1174,6 +1180,12 @@ func (h *ContentHandler) UpdateMunicipality(w http.ResponseWriter, r *http.Reque
 	}
 	if req.Stage != nil {
 		m.Stage = *req.Stage
+	}
+	if req.StartYear != nil {
+		m.StartYear = req.StartYear
+	}
+	if req.RenovationYear != nil {
+		m.RenovationYear = req.RenovationYear
 	}
 
 	if err := h.Service.UpdateMunicipality(m); err != nil {
