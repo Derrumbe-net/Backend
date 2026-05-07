@@ -348,12 +348,20 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 	http.ServeFile(w, r, fullPath)
 	return
 }
-
 func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
-	destDir := filepath.Join("uploads", "stations")
+	// 1. Get the dynamic base path just like Landslides uses
+	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data" // Safe fallback
+	}
+
+	// 2. Set the destination directory to BASE_PATH/stations
+	destDir := filepath.Join(baseDir, "stations")
+
+	// 3. Upload the physical file to the server
 	path, err := utils.UploadFile(r, "image", destDir, "")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -362,7 +370,14 @@ func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := h.Service.UpdateStationSensorImage(id, path); err != nil {
+	// 4. Extract just the filename (e.g., "Aibonito.png") from the server path
+	fileName := filepath.Base(path)
+
+	// 5. Build the strict database string: "stations/Aibonito.png"
+	dbPath := "stations/" + fileName
+
+	// 6. Update the database record
+	if err := h.Service.UpdateStationSensorImage(id, dbPath); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -370,9 +385,8 @@ func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"image_path": path})
+	json.NewEncoder(w).Encode(map[string]string{"image_path": dbPath})
 }
-
 func (h *StationHandler) GetStationHistory(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
