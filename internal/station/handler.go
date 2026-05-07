@@ -663,3 +663,89 @@ func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 }
+
+func (h *StationHandler) ExportStationsKML(w http.ResponseWriter, r *http.Request) {
+	stations, err := h.Service.GetAllStations()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to fetch stations for KML export"})
+		return
+	}
+
+	var kmlBuilder strings.Builder
+	kmlBuilder.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	kmlBuilder.WriteString(`<kml xmlns="http://www.opengis.net/kml/2.2">` + "\n")
+	kmlBuilder.WriteString(`  <Document>` + "\n")
+	kmlBuilder.WriteString(`    <name>Derrumbes Stations</name>` + "\n")
+	kmlBuilder.WriteString(`    <description>Export of all station locations and data</description>` + "\n")
+
+	for _, s := range stations {
+		kmlBuilder.WriteString(`    <Placemark>` + "\n")
+		kmlBuilder.WriteString(fmt.Sprintf(`      <name><![CDATA[%s]]></name>`+"\n", s.Name))
+
+		// --- Build ExtendedData for Google Earth Web ---
+		kmlBuilder.WriteString(`      <ExtendedData>` + "\n")
+
+		kmlBuilder.WriteString(fmt.Sprintf(`        <Data name="Station ID"><value>%d</value></Data>`+"\n", s.StationID))
+		kmlBuilder.WriteString(fmt.Sprintf(`        <Data name="Available"><value>%t</value></Data>`+"\n", s.IsAvailable))
+
+		if s.StationInstallationDate != nil {
+			formattedDate := s.StationInstallationDate.Format("2006-01-02 15:04:05")
+			kmlBuilder.WriteString(fmt.Sprintf(`        <Data name="Install Date"><value>%s</value></Data>`+"\n", formattedDate))
+		} else {
+			kmlBuilder.WriteString(`        <Data name="Install Date"><value>N/A</value></Data>` + "\n")
+		}
+
+		// Fetch latest reading for saturation + timestamp
+		latest, err := h.Service.GetLatestStation(s.StationID)
+		if err != nil || latest == nil {
+			kmlBuilder.WriteString(`        <Data name="Latest Reading"><value>N/A</value></Data>` + "\n")
+			kmlBuilder.WriteString(`        <Data name="Saturation"><value>No reading data</value></Data>` + "\n")
+		} else {
+			kmlBuilder.WriteString(fmt.Sprintf(`        <Data name="Latest Reading"><value>%s</value></Data>`+"\n",
+				latest.RecordedAt.Format("2006-01-02 15:04:05")))
+
+			// WC1-4 from reading are decimal.Decimal — sum them, then convert to float64
+			wcSum := latest.WC1.Add(latest.WC2).Add(latest.WC3).Add(latest.WC4)
+
+			// WC1Max-4Max from station are *float64 — sum only non-nil ones
+			var maxSum float64
+			if s.WC1Max != nil {
+				maxSum += *s.WC1Max
+			}
+			if s.WC2Max != nil {
+				maxSum += *s.WC2Max
+			}
+			if s.WC3Max != nil {
+				maxSum += *s.WC3Max
+			}
+			if s.WC4Max != nil {
+				maxSum += *s.WC4Max
+			}
+
+			if maxSum > 0 {
+				// Convert wcSum decimal to float64 for the final division
+				saturation, _ := wcSum.Float64()
+				saturation = saturation / maxSum
+				kmlBuilder.WriteString(fmt.Sprintf(`        <Data name="Saturation"><value>%.4f</value></Data>`+"\n", saturation))
+			} else {
+				kmlBuilder.WriteString(`        <Data name="Saturation"><value>No max sensor data</value></Data>` + "\n")
+			}
+		}
+
+		kmlBuilder.WriteString(`      </ExtendedData>` + "\n")
+		kmlBuilder.WriteString(`      <Point>` + "\n")
+		kmlBuilder.WriteString(fmt.Sprintf(`        <coordinates>%f,%f,0</coordinates>`+"\n", s.Longitude, s.Latitude))
+		kmlBuilder.WriteString(`      </Point>` + "\n")
+		kmlBuilder.WriteString(`    </Placemark>` + "\n")
+	}
+
+	kmlBuilder.WriteString(`  </Document>` + "\n")
+	kmlBuilder.WriteString(`</kml>`)
+
+	w.Header().Set("Content-Type", "application/vnd.google-earth.kml+xml")
+	w.Header().Set("Content-Disposition", `attachment; filename="stations_export.kml"`)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(kmlBuilder.String()))
+}

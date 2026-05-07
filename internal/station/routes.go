@@ -13,6 +13,7 @@ func RegisterRoutes(mux *http.ServeMux, handler *StationHandler) {
 
 	// Station Public Routes
 	mux.HandleFunc("GET /stations", handler.GetAllStations)
+	mux.HandleFunc("GET /stations/kml", handler.ExportStationsKML)
 	mux.HandleFunc("GET /stations/latest", handler.GetLatestAllStations)
 	mux.HandleFunc("GET /stations/latest/{id}", handler.GetLatestStation)
 	mux.HandleFunc("GET /stations/historical/{id}", handler.GetStationHistory)
