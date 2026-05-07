@@ -33,12 +33,13 @@ jobs:
           username: deployer
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          script: |
-            # 1. Navigate to the deployer's home directory
-            cd /home/deployer
-            
-            # 2. Update the backend repository inside its subdirectory
-            git -C backend pull origin main
-            
-            # 3. Restart services using the modern command
+          script: |            
+            # 1. Navigate directly into the backend directory
+            cd /home/deployer/backend
+                        
+            # 2. Pull the latest code (which drops the image_path ghost)
+            git pull origin main
+                        
+            # 3. Rebuild the Docker container to absorb the new Go code
+            docker compose down
             docker compose up -d --build
