@@ -334,11 +334,11 @@ func (h *ReportHandler) GetReportImages(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(images)
 }
-
 func (h *ReportHandler) UploadReportImage(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 
+	// 1. Fetch the report to check if an image_path (folder) already exists
 	res, err := h.Service.GetReport(id)
 	if err != nil || res == nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -348,16 +348,34 @@ func (h *ReportHandler) UploadReportImage(w http.ResponseWriter, r *http.Request
 	}
 
 	dbFolder := ""
+	needsDbUpdate := false
+
 	if res.ImagePath != nil && *res.ImagePath != "" {
-		dbFolder = *res.ImagePath
+		dbFolder = *res.ImagePath // Use existing folder
 	} else {
-		dbFolder = idStr
+		// FIX: Create the strict YYYY-MM-DD_ID folder format!
+		dateStr := res.ReportedAt.Format("2006-01-02")
+		dbFolder = fmt.Sprintf("%s_%s", dateStr, idStr)
+		needsDbUpdate = true // Flag that we need to save this new format to the DB!
 	}
 
+	// 2. Build the destination directory INSIDE the folder
 	baseDir := os.Getenv("BASE_PATH")
+	if baseDir == "" {
+		baseDir = "data"
+	}
 
 	destDir := filepath.Join(baseDir, "landslides", dbFolder)
 
+	// Force Go to create the folder if it doesn't exist
+	if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Failed to create directory"})
+		return
+	}
+
+	// 3. Save the file physically
 	path, err := utils.UploadFile(r, "image_file", destDir, "")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -367,6 +385,17 @@ func (h *ReportHandler) UploadReportImage(w http.ResponseWriter, r *http.Request
 	}
 
 	fileName := filepath.Base(path)
+
+	// 4. Save the new folder name to the DB if it was just created
+	if needsDbUpdate {
+		if err := h.Service.UpdateReportImage(id, dbFolder); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Failed to link folder to database"})
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"message":  "Image uploaded successfully",
