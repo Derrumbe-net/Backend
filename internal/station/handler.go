@@ -36,7 +36,8 @@ type CreateStationRequest struct {
 	Susceptibility          *string    `json:"susceptibility"`
 	Depth                   *string    `json:"depth"`
 	LandslideForecast       *float64   `json:"landslide_forecast"`
-	ImagePath               *string    `json:"image_url"`
+	SensorImagePath         *string    `json:"sensor_image_path"` // Updated
+	PlotImagePath           *string    `json:"plot_image_path"`   // Updated
 	Elevation               *int       `json:"elevation"`
 	Slope                   *float64   `json:"slope"`
 	Collaborator            *string    `json:"collaborator"`
@@ -57,7 +58,8 @@ type UpdateStationRequest struct {
 	Susceptibility          *string    `json:"susceptibility"`
 	Depth                   *string    `json:"depth"`
 	LandslideForecast       *float64   `json:"landslide_forecast"`
-	ImagePath               *string    `json:"image_url"`
+	SensorImagePath         *string    `json:"sensor_image_path"` // Updated
+	PlotImagePath           *string    `json:"plot_image_path"`   // Updated
 	Elevation               *int       `json:"elevation"`
 	Slope                   *float64   `json:"slope"`
 	Collaborator            *string    `json:"collaborator"`
@@ -79,7 +81,8 @@ type StationResponse struct {
 	Susceptibility          *string    `json:"susceptibility"`
 	Depth                   *string    `json:"depth"`
 	LandslideForecast       *float64   `json:"landslide_forecast"`
-	ImagePath               *string    `json:"image_url"`
+	SensorImagePath         *string    `json:"sensor_image_path"` // Updated
+	PlotImagePath           *string    `json:"plot_image_path"`   // Updated
 	Elevation               *int       `json:"elevation"`
 	Slope                   *float64   `json:"slope"`
 	Collaborator            *string    `json:"collaborator"`
@@ -102,7 +105,8 @@ func toStationResponse(s *models.Station) StationResponse {
 		Susceptibility:          s.Susceptibility,
 		Depth:                   s.Depth,
 		LandslideForecast:       s.LandslideForecast,
-		ImagePath:               s.ImagePath,
+		SensorImagePath:         s.SensorImagePath, // Updated
+		PlotImagePath:           s.PlotImagePath,   // Updated
 		Elevation:               s.Elevation,
 		Slope:                   s.Slope,
 		Collaborator:            s.Collaborator,
@@ -184,7 +188,8 @@ func (h *StationHandler) CreateStation(w http.ResponseWriter, r *http.Request) {
 		Susceptibility:          req.Susceptibility,
 		Depth:                   req.Depth,
 		LandslideForecast:       req.LandslideForecast,
-		ImagePath:               req.ImagePath,
+		SensorImagePath:         req.SensorImagePath, // Updated
+		PlotImagePath:           req.PlotImagePath,   // Updated
 		Elevation:               req.Elevation,
 		Slope:                   req.Slope,
 		Collaborator:            req.Collaborator,
@@ -266,8 +271,11 @@ func (h *StationHandler) UpdateStation(w http.ResponseWriter, r *http.Request) {
 	if req.LandslideForecast != nil {
 		s.LandslideForecast = req.LandslideForecast
 	}
-	if req.ImagePath != nil {
-		s.ImagePath = req.ImagePath
+	if req.SensorImagePath != nil {
+		s.SensorImagePath = req.SensorImagePath // Updated
+	}
+	if req.PlotImagePath != nil {
+		s.PlotImagePath = req.PlotImagePath // Updated
 	}
 	if req.Elevation != nil {
 		s.Elevation = req.Elevation
@@ -314,23 +322,20 @@ func (h *StationHandler) DeleteStation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Request) {
-	// imageType := r.PathValue("type")
 	idStr := r.PathValue("id")
 	id, _ := strconv.Atoi(idStr)
 	s, err := h.Service.GetStation(id)
 
-	// Safely check the pointer for ImagePath
-	if err != nil || s == nil || s.ImagePath == nil || *s.ImagePath == "" {
+	// Safely check the pointer for SensorImagePath
+	if err != nil || s == nil || s.SensorImagePath == nil || *s.SensorImagePath == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Image not found in database"})
 		return
 	}
 
-	// if imageType == "sensor" || imageType == "" {
 	baseDir := os.Getenv("BASE_PATH")
-
-	fullPath := filepath.Join(baseDir, *s.ImagePath)
+	fullPath := filepath.Join(baseDir, *s.SensorImagePath)
 
 	// Verify the file physically exists on the server
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
@@ -342,11 +347,6 @@ func (h *StationHandler) ServeStationImage(w http.ResponseWriter, r *http.Reques
 
 	http.ServeFile(w, r, fullPath)
 	return
-	// }
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(map[string]string{"error": "Image type not supported"})
 }
 
 func (h *StationHandler) UploadStationSensorImage(w http.ResponseWriter, r *http.Request) {
@@ -457,8 +457,6 @@ func (h *StationHandler) GetStationImages(w http.ResponseWriter, r *http.Request
 	idStr := r.PathValue("id")
 	fmt.Printf("[GetStationImages] Handler called with id=%s path=%s\n", idStr, r.URL.Path)
 
-	// Check if a specific image type is being requested
-	// e.g. /stations/item/2/images/sensor or /stations/item/2/images/plot
 	imageType := ""
 	if strings.HasSuffix(r.URL.Path, "/sensor") {
 		imageType = "sensor"
@@ -486,12 +484,12 @@ func (h *StationHandler) GetStationImages(w http.ResponseWriter, r *http.Request
 
 	// If a specific type is requested, serve the file directly
 	if imageType == "sensor" {
-		if s.ImagePath == nil || *s.ImagePath == "" {
+		if s.SensorImagePath == nil || *s.SensorImagePath == "" {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{"error": "No sensor image"})
 			return
 		}
-		fullPath := filepath.Join(baseDir, *s.ImagePath)
+		fullPath := filepath.Join(baseDir, *s.SensorImagePath)
 		fmt.Printf("[GetStationImages] Serving sensor image at path=%q\n", fullPath)
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
@@ -503,13 +501,12 @@ func (h *StationHandler) GetStationImages(w http.ResponseWriter, r *http.Request
 	}
 
 	if imageType == "plot" {
-		latest, err := h.Service.GetLatestStation(id)
-		if err != nil || latest == nil || latest.ImagePath == "" {
+		if s.PlotImagePath == nil || *s.PlotImagePath == "" {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{"error": "No plot image"})
 			return
 		}
-		fullPath := filepath.Join(baseDir, "stations", latest.ImagePath)
+		fullPath := filepath.Join(baseDir, "stations", *s.PlotImagePath)
 		fmt.Printf("[GetStationImages] Serving plot image at path=%q\n", fullPath)
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			w.WriteHeader(http.StatusNotFound)
@@ -527,29 +524,18 @@ func (h *StationHandler) GetStationImages(w http.ResponseWriter, r *http.Request
 	}
 	result := StationImages{}
 
-	if s.ImagePath != nil && *s.ImagePath != "" {
-		fullSensorPath := filepath.Join(baseDir, *s.ImagePath)
+	if s.SensorImagePath != nil && *s.SensorImagePath != "" {
+		fullSensorPath := filepath.Join(baseDir, *s.SensorImagePath)
 		fmt.Printf("[GetStationImages] Checking sensor image at path=%q\n", fullSensorPath)
-		if _, err := os.Stat(fullSensorPath); err != nil {
-			fmt.Printf("[GetStationImages] Sensor image not found: %v\n", err)
-		} else {
+		if _, err := os.Stat(fullSensorPath); err == nil {
 			result.SensorImageURL = fmt.Sprintf("/stations/item/%d/images/sensor", id)
 		}
 	}
 
-	latest, err := h.Service.GetLatestStation(id)
-	if err != nil {
-		fmt.Printf("[GetStationImages] Error fetching latest reading: %v\n", err)
-	} else if latest == nil {
-		fmt.Printf("[GetStationImages] No latest reading for station_id=%d\n", id)
-	} else if latest.ImagePath == "" {
-		fmt.Printf("[GetStationImages] Latest reading has empty ImagePath for station_id=%d\n", id)
-	} else {
-		fullPlotPath := filepath.Join(baseDir, "stations", latest.ImagePath)
+	if s.PlotImagePath != nil && *s.PlotImagePath != "" {
+		fullPlotPath := filepath.Join(baseDir, "stations", *s.PlotImagePath)
 		fmt.Printf("[GetStationImages] Checking plot image at path=%q\n", fullPlotPath)
-		if _, statErr := os.Stat(fullPlotPath); statErr != nil {
-			fmt.Printf("[GetStationImages] Plot image not found: %v\n", statErr)
-		} else {
+		if _, statErr := os.Stat(fullPlotPath); statErr == nil {
 			result.PlotImageURL = fmt.Sprintf("/stations/item/%d/images/plot", id)
 		}
 	}
@@ -588,24 +574,22 @@ func (h *StationHandler) ServeStationImageByType(w http.ResponseWriter, r *http.
 
 	switch imageType {
 	case "sensor":
-		// Station.ImagePath = "stations/mayaguez.jpg"
-		if s.ImagePath == nil || *s.ImagePath == "" {
+		if s.SensorImagePath == nil || *s.SensorImagePath == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{"error": "No sensor image"})
 			return
 		}
-		fullPath = filepath.Join(baseDir, *s.ImagePath)
+		fullPath = filepath.Join(baseDir, *s.SensorImagePath)
 
 	case "plot":
-		latest, err := h.Service.GetLatestStation(id)
-		if err != nil || latest == nil || latest.ImagePath == "" {
+		if s.PlotImagePath == nil || *s.PlotImagePath == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]string{"error": "No plot image"})
 			return
 		}
-		fullPath = filepath.Join(baseDir, "stations", latest.ImagePath)
+		fullPath = filepath.Join(baseDir, "stations", *s.PlotImagePath)
 
 	default:
 		w.Header().Set("Content-Type", "application/json")
@@ -653,7 +637,6 @@ func (h *StationHandler) CreateReading(w http.ResponseWriter, r *http.Request) {
 		WC4:           decimal.NewFromFloat(req.WC4),
 	}
 
-	// Assuming you add CreateReading to your StationService
 	if err := h.Service.DAO.CreateReading(reading); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -697,7 +680,6 @@ func (h *StationHandler) ExportStationsKML(w http.ResponseWriter, r *http.Reques
 			kmlBuilder.WriteString(`        <Data name="Install Date"><value>N/A</value></Data>` + "\n")
 		}
 
-		// Fetch latest reading for saturation + timestamp
 		latest, err := h.Service.GetLatestStation(s.StationID)
 		if err != nil || latest == nil {
 			kmlBuilder.WriteString(`        <Data name="Latest Reading"><value>N/A</value></Data>` + "\n")

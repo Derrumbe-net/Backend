@@ -13,7 +13,8 @@ type Station struct {
 	Susceptibility          *string    `json:"susceptibility"`
 	Depth                   *string    `json:"depth"`
 	LandslideForecast       *float64   `json:"landslide_forecast"`
-	ImagePath               *string    `json:"image_url"`
+	SensorImagePath         *string    `json:"sensor_image_path"`
+	PlotImagePath           *string    `json:"plot_image_path"`
 	Latitude                float64    `json:"latitude"`
 	Longitude               float64    `json:"longitude"`
 	Elevation               *int       `json:"elevation"`
